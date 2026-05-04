@@ -1,0 +1,16 @@
+numpy>=1.24
+opencv-python-headless>=4.8
+matplotlib>=3.7
+
+# ML tracking
+mlflow>=2.10
+
+# Parallel compute (optional but recommended)
+ray>=2.9
+
+# ONNX inference (optional — needed only for ONNXDetector)
+# onnxruntime>=1.17
+
+# Testing
+pytest>=7.4
+pytest-cov>=4.1

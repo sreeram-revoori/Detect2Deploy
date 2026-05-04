@@ -1,0 +1,47 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+.env
+
+# ── Environment / secrets (never commit these) ────────────────────────────────
+.env
+.env.*
+*.env
+secrets.json
+config/secrets.*
+
+# ── MLflow ────────────────────
+mlruns/
+mlartifacts/
+
+
+# ── ONNX model weights (can be large) ────────────────────────────────────────
+*.onnx
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# ── pytest cache ─────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

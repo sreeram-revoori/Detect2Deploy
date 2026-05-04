@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+
+  nurosim:
+    build: .
+    container_name: nurosim-eval
+    volumes:
+      - ./outputs:/app/outputs
+      - ./mlruns:/app/mlruns
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["python", "main.py", "--n", "500", "--workers", "4",
+              "--save-frames", "--mlflow"]
+
+  mlflow-ui:
+    image: python:3.11-slim
+    container_name: nurosim-mlflow
+    working_dir: /mlruns
+    volumes:
+      - ./mlruns:/mlruns
+    ports:
+      - "5000:5000"
+    command: >
+      bash -c "pip install mlflow --quiet &&
+               mlflow ui --host 0.0.0.0 --port 5000 --backend-store-uri /mlruns"
+    depends_on:
+      - nurosim
