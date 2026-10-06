@@ -5,8 +5,8 @@ Lightweight perception model wrapper.
 We ship two backends:
   1. MockDetector   – deterministic stub that adds realistic noise to GT boxes.
                       Zero dependencies beyond NumPy. Used for fast CI runs.
-  2. ONNXDetector   – wraps a real ONNX model (e.g. YOLOv8n-exported).
-                      Requires `onnxruntime` and a model file.
+  2. ONNXDetector   – a real ONNX model (YOLOv8n trained on NuroSim frames)
+                      via nurosim.inference. Requires `onnxruntime`.
 
 Both expose the same interface:
     detector.predict(frame: np.ndarray) -> List[BBox]
@@ -16,10 +16,10 @@ from __future__ import annotations
 
 import time
 import numpy as np
-import cv2
-from typing import List, Protocol, runtime_checkable
+from typing import Any, Dict, List, Protocol, runtime_checkable
 
 from nurosim.scenario_generator import BBox, FRAME_W, FRAME_H, CLASS_CONFIG
+from nurosim.inference.detector import InferenceDetector
 
 
 # ── Protocol (interface) ──────────────────────────────────────────────────────
@@ -131,83 +131,38 @@ class MockDetector:
 
 # ── ONNX Detector ─────────────────────────────────────────────────────────────
 
-class ONNXDetector:
+class ONNXDetector(InferenceDetector):
     """
-    Wraps a YOLOv8-style ONNX model for inference.
+    Back-compat name for the real ONNX inference path.
 
-    Export your model with:
-        from ultralytics import YOLO
-        YOLO("yolov8n.pt").export(format="onnx", imgsz=640)
+    The original version had three bugs: no NMS, boxes left in 640x640 model
+    space instead of being mapped back through the resize, and `cls_id % 4`
+    mapping COCO's 80 classes onto ours. It now delegates to
+    nurosim.inference (letterbox → ORT → vectorised decode + class-aware NMS).
 
-    Then pass the resulting .onnx path here.
+    Export a model with:  python -m nurosim.deploy export
     """
 
-    def __init__(self, model_path: str, conf_threshold: float = 0.45):
-        try:
-            import onnxruntime as ort
-        except ImportError:
-            raise ImportError(
-                "onnxruntime is required for ONNXDetector. "
-                "Install with: pip install onnxruntime"
-            )
+    def __init__(self, model_path: str, conf_threshold: float = 0.45, **kwargs):
+        super().__init__(model_path, conf_threshold=conf_threshold, **kwargs)
 
-        providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        self._session        = ort.InferenceSession(model_path, providers=providers)
-        self._input_name     = self._session.get_inputs()[0].name
-        self._conf_threshold = conf_threshold
-        self._model_path     = model_path
-        self._name           = f"ONNX:{model_path.split('/')[-1]}"
 
-    @property
-    def name(self) -> str:
-        return self._name
+def build_detector(spec: Dict[str, Any] | None, seed: int = 0):
+    """
+    Construct a detector from a picklable spec, so worker processes / Ray
+    actors can each build (and keep) their own instance.
 
-    def _preprocess(self, frame: np.ndarray) -> np.ndarray:
-        """BGR HxWx3 uint8  →  float32 1x3xHxW  [0,1]"""
-        img = cv2.resize(frame, (640, 640))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img.astype(np.float32) / 255.0
-        return np.transpose(img, (2, 0, 1))[np.newaxis]   # NCHW
-
-    def _postprocess(self, output: np.ndarray) -> List[BBox]:
-        """
-        Parse raw YOLOv8 output tensor (1, 84, 8400) into BBox list.
-        YOLOv8 output layout: [x_c, y_c, w, h, cls0_conf, cls1_conf, ...]
-        """
-        class_names = list(CLASS_CONFIG.keys())
-        preds = output[0].T                               # (8400, 84)
-        boxes, scores, class_ids = [], [], []
-
-        for pred in preds:
-            cls_scores = pred[4:]
-            cls_id     = int(np.argmax(cls_scores))
-            score      = float(cls_scores[cls_id])
-            if score < self._conf_threshold:
-                continue
-
-            xc, yc, w, h = pred[:4]
-            x1 = int((xc - w / 2))
-            y1 = int((yc - h / 2))
-            x2 = int((xc + w / 2))
-            y2 = int((yc + h / 2))
-
-            # Map COCO class_id to our 4-class system (simplified)
-            mapped_cls = cls_id % len(class_names)
-
-            boxes.append(BBox(
-                x1=x1, y1=y1, x2=x2, y2=y2,
-                class_id=mapped_cls,
-                class_name=class_names[mapped_cls],
-                confidence=score,
-            ))
-
-        return boxes
-
-    def predict(self, frame: np.ndarray,
-                ground_truth=None) -> List[BBox]:
-        inp    = self._preprocess(frame)
-        output = self._session.run(None, {self._input_name: inp})
-        return self._postprocess(output[0])
+        {"kind": "mock", "tp_rate": 0.82, ...}
+        {"kind": "onnx", "model_path": "models/x.onnx", "provider": "cpu", ...}
+    """
+    spec = dict(spec or {"kind": "mock"})
+    kind = spec.pop("kind", "mock")
+    if kind == "mock":
+        spec.setdefault("seed", seed)
+        return MockDetector(**spec)
+    if kind == "onnx":
+        return InferenceDetector(**spec)
+    raise ValueError(f"unknown detector kind '{kind}'")
 
 
 # ── Latency-aware wrapper ─────────────────────────────────────────────────────

@@ -45,3 +45,11 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+# ── Deploy pipeline artefacts ────────────────────────────────────────────────
+runs/
+data/
+models/*
+!models/nurosim_det_fp32.onnx
+!models/README.md
+*.log
+*.data

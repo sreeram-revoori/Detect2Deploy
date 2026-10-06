@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # ── Python deps ───────────────────────────────────────────────────────────────
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-extras.txt ./
+RUN pip install --no-cache-dir -r requirements-extras.txt
 
 # ── Source ───────────────────────────────────────────────────────────────────
 COPY . .

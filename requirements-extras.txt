@@ -1,0 +1,4 @@
+-r requirements.txt
+# Experiment tracking + distributed eval (both optional at runtime)
+mlflow>=2.10
+ray>=2.9

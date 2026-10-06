@@ -1,0 +1,92 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NuroSim deploy pipeline config
+#   python -m nurosim.deploy all --profile m4
+# ─────────────────────────────────────────────────────────────────────────────
+
+imgsz: 640
+
+models:
+  fp32:       models/nurosim_det_fp32.onnx       # reference artefact (committed)
+  fp16:       models/nurosim_det_fp16.onnx       # everything FP16
+  fp16_mixed: models/nurosim_det_fp16_mixed.onnx # Detect-head tail kept FP32
+  int8:       models/nurosim_det_int8.onnx       # QDQ, Detect-head tail kept FP32
+  int8_full:  models/nurosim_det_int8_full.onnx  # QDQ, everything INT8 (naive baseline)
+
+quantization:
+  calib_frames: 128            # weather-stratified, disjoint from eval frames
+  method: minmax               # minmax | entropy | percentile
+  per_channel: true
+  symmetric_activations: true  # TensorRT explicit quantisation needs symmetric INT8
+
+eval:
+  n_scenarios: 300             # held-out (seeds 100000+)
+  conf_threshold: 0.01         # low threshold → full PR curve for mAP
+  raw_parity_frames: 16        # frames used for raw-tensor comparison
+
+deploy:                        # the operating point the vehicle would run
+  conf_threshold: 0.25
+  iou_threshold: 0.6
+
+benchmark:
+  sessions: 3                  # independent sessions per target, samples pooled
+  warmup: 30
+  iters: 200                   # per session
+  n_frames: 64
+  batch_sizes: [1, 2, 4, 8]
+  intra_op_threads: null       # null = ORT default (all performance cores)
+
+# Accuracy budget relative to the profile's reference target. Fixed before the
+# first measurement — the point of a gate is that it can fail.
+accuracy_budget:
+  max_map50_drop: 0.01
+  max_map50_drop_per_weather: 0.02
+  max_ap50_drop_per_class: 0.03
+
+profiles:
+
+  m4:
+    description: Apple M4 (4 performance + 6 efficiency cores, Neural Engine) — CPU EP and CoreML EP
+    reference: fp32-cpu
+    # Pin ORT's CPU thread pool to the 4 performance cores. With the default
+    # (all 10 cores) the efficiency-core threads straggle: INT8 p50 is ~20%
+    # slower and run-to-run p99 swings 26–42 ms (FP32) instead of 25–31 ms.
+    intra_op_threads: 4
+    targets:
+      fp32-cpu:      {model: fp32,      provider: cpu,    p99_budget_ms: 40}
+      fp16-cpu:      {model: fp16,      provider: cpu,    p99_budget_ms: 40}
+      int8-cpu:      {model: int8,      provider: cpu,    p99_budget_ms: 30}
+      int8_full-cpu: {model: int8_full, provider: cpu,    expect_fail: true}   # negative control
+      fp32-coreml:   {model: fp32,      provider: coreml, static_batch: 1, p99_budget_ms: 20}
+      fp16-coreml:   {model: fp16,      provider: coreml, static_batch: 1, p99_budget_ms: 10}
+      fp16_mixed-coreml: {model: fp16_mixed, provider: coreml, static_batch: 1, p99_budget_ms: 10}
+
+  ci-cpu:
+    description: >
+      GitHub-hosted ubuntu runner. Shared, noisy VMs — the latency budget is a
+      tripwire for order-of-magnitude regressions only; real latency gating
+      needs pinned, dedicated hardware.
+    reference: fp32-cpu
+    targets:
+      fp32-cpu:      {model: fp32,      provider: cpu, p99_budget_ms: 1000}
+      int8-cpu:      {model: int8,      provider: cpu, p99_budget_ms: 1000}
+      int8_full-cpu: {model: int8_full, provider: cpu, expect_fail: true}   # proves the gate still bites
+
+  nvidia-trt:
+    description: >
+      NVIDIA GPU / Jetson Orin via the CUDA and TensorRT EPs. NOT YET RUN —
+      no NVIDIA hardware was available when this was written. Set latency
+      budgets after the first measured run.
+    reference: fp32-cpu
+    targets:
+      fp32-cpu:  {model: fp32, provider: cpu}
+      fp32-cuda: {model: fp32, provider: cuda}
+      fp16-trt:
+        model: fp32
+        provider: tensorrt
+        static_batch: 1
+        provider_options: {trt_fp16_enable: true}
+      int8-trt:                # QDQ model → TensorRT explicit quantisation
+        model: int8
+        provider: tensorrt
+        static_batch: 1
+        provider_options: {trt_int8_enable: true, trt_fp16_enable: true}

@@ -1,0 +1,5 @@
+-r requirements.txt
+# Only needed to (re)train and export the detector; inference does not need torch
+torch>=2.2
+ultralytics>=8.3
+onnxslim>=0.1.30
