@@ -1,4 +1,4 @@
-// nurosim_multistream: two models sharing one GPU.
+// d2d_multistream: two models sharing one GPU.
 //
 // Model A is the latency-critical detector, fed periodically like a camera
 // (default 30 Hz, batch 1). Model B is a heavy background workload run
@@ -8,7 +8,7 @@
 // period) and B's throughput. Shows how much a co-located model inflates the
 // critical model's tail, and how much stream priority buys back.
 //
-//   nurosim_multistream --engine-a a.engine --engine-b b.engine --frames bench.nsfr
+//   d2d_multistream --engine-a a.engine --engine-b b.engine --frames bench.nsfr
 //                       [--rate-a-hz 30] [--batch-b 8] [--duration-s 8] [--json out.json]
 #include <atomic>
 #include <chrono>
@@ -18,11 +18,11 @@
 #include <thread>
 #include <vector>
 
-#include "nurosim/cli.h"
-#include "nurosim/pipeline.h"
-#include "nurosim/stats.h"
+#include "detect2deploy/cli.h"
+#include "detect2deploy/pipeline.h"
+#include "detect2deploy/stats.h"
 
-using namespace nurosim;
+using namespace detect2deploy;
 using Clock = std::chrono::steady_clock;
 
 struct PhaseResult {

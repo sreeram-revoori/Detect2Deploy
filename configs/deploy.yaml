@@ -1,17 +1,17 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# NuroSim deploy pipeline config
-#   python -m nurosim.deploy all --profile m4
+# Detect2Deploy deploy pipeline config
+#   python -m detect2deploy.deploy all --profile m4
 # ─────────────────────────────────────────────────────────────────────────────
 
 imgsz: 640
 
 models:
-  fp32:       models/nurosim_det_fp32.onnx       # reference artefact (committed)
-  fp16:       models/nurosim_det_fp16.onnx       # everything FP16
-  fp16_mixed: models/nurosim_det_fp16_mixed.onnx # Detect-head tail kept FP32
-  int8:       models/nurosim_det_int8.onnx       # QDQ, Detect-head tail kept FP32
-  int8_full:  models/nurosim_det_int8_full.onnx  # QDQ, everything INT8 (naive baseline)
-  int8_trt:   models/nurosim_det_int8_trt.onnx   # as int8, float conv biases (TensorRT parser needs this)
+  fp32:       models/d2d_det_fp32.onnx       # reference artefact (committed)
+  fp16:       models/d2d_det_fp16.onnx       # everything FP16
+  fp16_mixed: models/d2d_det_fp16_mixed.onnx # Detect-head tail kept FP32
+  int8:       models/d2d_det_int8.onnx       # QDQ, Detect-head tail kept FP32
+  int8_full:  models/d2d_det_int8_full.onnx  # QDQ, everything INT8 (naive baseline)
+  int8_trt:   models/d2d_det_int8_trt.onnx   # as int8, float conv biases (TensorRT parser needs this)
 
 quantization:
   calib_frames: 128            # weather-stratified, disjoint from eval frames

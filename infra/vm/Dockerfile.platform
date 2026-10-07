@@ -1,4 +1,4 @@
-# nurosim-gpu (TensorRT 25.01 container + repo deps, see gpu/Dockerfile) + Tier-3 deps.
-ARG BASE=nurosim-gpu
+# d2d-gpu (TensorRT 25.01 container + repo deps, see gpu/Dockerfile) + Tier-3 deps.
+ARG BASE=d2d-gpu
 FROM ${BASE}
 RUN pip install --no-cache-dir "ray[data]" mlflow "tritonclient[grpc]" nvidia-ml-py pyarrow

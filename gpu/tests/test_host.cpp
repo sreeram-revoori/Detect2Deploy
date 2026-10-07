@@ -4,12 +4,12 @@
 #include <vector>
 
 #include "check.h"
-#include "nurosim/frames.h"
-#include "nurosim/letterbox.h"
-#include "nurosim/postprocess.h"
-#include "nurosim/stats.h"
+#include "detect2deploy/frames.h"
+#include "detect2deploy/letterbox.h"
+#include "detect2deploy/postprocess.h"
+#include "detect2deploy/stats.h"
 
-using namespace nurosim;
+using namespace detect2deploy;
 
 // [(cx, cy, w, h, cls, score)] → (4 + nc) x A row-major
 static std::vector<float> raw(const std::vector<std::vector<float>>& anchors, int nc = 4) {

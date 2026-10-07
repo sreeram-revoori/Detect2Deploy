@@ -1,9 +1,9 @@
-#include "nurosim/letterbox.h"
+#include "detect2deploy/letterbox.h"
 
 #include <algorithm>
 #include <cmath>
 
-namespace nurosim {
+namespace detect2deploy {
 
 LetterboxMeta compute_letterbox(int frame_w, int frame_h, int size) {
   LetterboxMeta m{};
@@ -66,4 +66,4 @@ void letterbox_cpu(const uint8_t* bgr, const LetterboxMeta& m, float* out) {
   }
 }
 
-}  // namespace nurosim
+}  // namespace detect2deploy

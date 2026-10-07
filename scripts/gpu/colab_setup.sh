@@ -75,7 +75,7 @@ pip install -q onnx onnxruntime-gpu "cmake>=3.24" pytest pyyaml
 
 # The pip onnxruntime-gpu build may target a different CUDA major than the
 # toolkit; if its CUDA EP can't start, add that major's runtime wheels
-# (loaded via onnxruntime.preload_dlls, see nurosim/inference/runtime.py).
+# (loaded via onnxruntime.preload_dlls, see detect2deploy/inference/runtime.py).
 ort_cuda_ok() {
   python3 - <<'EOF'
 import sys, onnxruntime as ort
@@ -83,7 +83,7 @@ try:
     ort.preload_dlls()
 except Exception:
     pass
-s = ort.InferenceSession("models/nurosim_det_fp32.onnx", providers=["CUDAExecutionProvider"])
+s = ort.InferenceSession("models/d2d_det_fp32.onnx", providers=["CUDAExecutionProvider"])
 sys.exit(0 if s.get_providers()[0] == "CUDAExecutionProvider" else 1)
 EOF
 }

@@ -1,10 +1,10 @@
-#include "nurosim/frames.h"
+#include "detect2deploy/frames.h"
 
 #include <cstring>
 #include <fstream>
 #include <stdexcept>
 
-namespace nurosim {
+namespace detect2deploy {
 
 FrameSet load_frames(const std::string& path) {
   std::ifstream f(path, std::ios::binary);
@@ -34,4 +34,4 @@ void save_frames(const std::string& path, const FrameSet& fs) {
   f.write(reinterpret_cast<const char*>(fs.data.data()), static_cast<std::streamsize>(fs.data.size()));
 }
 
-}  // namespace nurosim
+}  // namespace detect2deploy

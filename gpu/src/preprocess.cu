@@ -1,6 +1,6 @@
-#include "nurosim/preprocess_gpu.h"
+#include "detect2deploy/preprocess_gpu.h"
 
-namespace nurosim {
+namespace detect2deploy {
 
 namespace {
 
@@ -58,4 +58,4 @@ void letterbox_gpu(const uint8_t* d_bgr, const LetterboxMeta& m, float* d_chw, c
       static_cast<float>(m.frame_h) / m.new_h, identity, m.size, d_chw);
 }
 
-}  // namespace nurosim
+}  // namespace detect2deploy

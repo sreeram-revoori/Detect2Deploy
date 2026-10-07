@@ -7,10 +7,10 @@ parity helpers and the release gate.
 import numpy as np
 import pytest
 
-from nurosim.inference.preprocess import letterbox, preprocess_batch
-from nurosim.inference.postprocess import decode_single, nms
-from nurosim.metrics import compute_iou, iou_matrix
-from nurosim.scenario_generator import BBox, generate_scenario
+from detect2deploy.inference.preprocess import letterbox, preprocess_batch
+from detect2deploy.inference.postprocess import decode_single, nms
+from detect2deploy.metrics import compute_iou, iou_matrix
+from detect2deploy.scenario_generator import BBox, generate_scenario
 
 
 def _raw(boxes_scores, nc=4):
@@ -117,7 +117,7 @@ class TestGeneratorDeterminism:
 class TestRuntime:
 
     def test_dynamic_batch(self, tiny_detector_onnx):
-        from nurosim.inference.runtime import OrtRuntime
+        from detect2deploy.inference.runtime import OrtRuntime
         rt = OrtRuntime(tiny_detector_onnx)
         for bs in (1, 3):
             out = rt.run(np.zeros((bs, 3, 640, 640), np.float32))
@@ -125,7 +125,7 @@ class TestRuntime:
         assert rt.provider_active
 
     def test_graph_optimisation_levels(self, tiny_detector_onnx):
-        from nurosim.inference.runtime import OrtRuntime
+        from detect2deploy.inference.runtime import OrtRuntime
         x = np.zeros((1, 3, 640, 640), np.float32)
         ref = OrtRuntime(tiny_detector_onnx).run(x)
         for level in ("extended", "basic", "disable"):
@@ -133,20 +133,20 @@ class TestRuntime:
                                        rtol=1e-5, atol=1e-4)
 
     def test_static_batch_pins_shape(self, tiny_detector_onnx):
-        from nurosim.inference.runtime import OrtRuntime
+        from detect2deploy.inference.runtime import OrtRuntime
         rt = OrtRuntime(tiny_detector_onnx, static_batch=1)
         assert rt.input_shape[0] == 1
 
     def test_unavailable_provider_raises(self, tiny_detector_onnx):
         import onnxruntime as ort
-        from nurosim.inference.runtime import OrtRuntime, ProviderUnavailableError
+        from detect2deploy.inference.runtime import OrtRuntime, ProviderUnavailableError
         if "TensorrtExecutionProvider" in ort.get_available_providers():
             pytest.skip("TensorRT is available on this host")
         with pytest.raises(ProviderUnavailableError):
             OrtRuntime(tiny_detector_onnx, provider="tensorrt")
 
     def test_detector_interface_and_timing(self, tiny_detector_onnx):
-        from nurosim.inference.detector import InferenceDetector
+        from detect2deploy.inference.detector import InferenceDetector
         det = InferenceDetector(tiny_detector_onnx, conf_threshold=0.01)
         sc = generate_scenario(0, seed=0)
         boxes, t = det.predict_timed(sc.frame)
@@ -155,7 +155,7 @@ class TestRuntime:
         assert t.pre_ms > 0 and t.infer_ms > 0 and t.total_ms >= t.infer_ms
 
     def test_parallel_evaluator_with_onnx_spec(self, tiny_detector_onnx):
-        from nurosim.ray_worker import ParallelEvaluator
+        from detect2deploy.ray_worker import ParallelEvaluator
         spec = {"kind": "onnx", "model_path": tiny_detector_onnx, "intra_op_threads": 1}
         pe = ParallelEvaluator(n_scenarios=8, n_workers=2, use_ray=False,
                                base_seed=0, detector_spec=spec)
@@ -168,8 +168,8 @@ class TestRuntime:
 class TestQuantize:
 
     def test_fp16_keeps_fp32_io_and_matches(self, tiny_detector_onnx, tmp_path):
-        from nurosim.deploy.quantize import to_fp16
-        from nurosim.inference.runtime import OrtRuntime
+        from detect2deploy.deploy.quantize import to_fp16
+        from detect2deploy.inference.runtime import OrtRuntime
         out = to_fp16(tiny_detector_onnx, str(tmp_path / "fp16.onnx"))
         x, _ = preprocess_batch([generate_scenario(0, seed=0).frame])
         rt16 = OrtRuntime(out)
@@ -179,8 +179,8 @@ class TestQuantize:
 
     def test_fp16_mixed_keeps_tail_fp32(self, tiny_detector_onnx, tmp_path):
         import onnx
-        from nurosim.deploy.quantize import to_fp16
-        from nurosim.inference.runtime import OrtRuntime
+        from detect2deploy.deploy.quantize import to_fp16
+        from detect2deploy.inference.runtime import OrtRuntime
         out = to_fp16(tiny_detector_onnx, str(tmp_path / "fp16m.onnx"), keep_head_tail_fp32=True)
         model = onnx.load(out)
         names = [n.name for n in model.graph.node]
@@ -190,8 +190,8 @@ class TestQuantize:
 
     def test_int8_qdq_close_to_fp32(self, tiny_detector_onnx, tmp_path):
         import onnx
-        from nurosim.deploy.quantize import to_int8
-        from nurosim.inference.runtime import OrtRuntime
+        from detect2deploy.deploy.quantize import to_int8
+        from detect2deploy.inference.runtime import OrtRuntime
         out = to_int8(tiny_detector_onnx, str(tmp_path / "int8.onnx"), n_calib=8)
         ops = {n.op_type for n in onnx.load(out).graph.node}
         assert {"QuantizeLinear", "DequantizeLinear"} <= ops
@@ -201,7 +201,7 @@ class TestQuantize:
 
     def test_int8_for_tensorrt_has_no_int32_bias(self, tiny_detector_onnx, tmp_path):
         import onnx
-        from nurosim.deploy.quantize import to_int8
+        from detect2deploy.deploy.quantize import to_int8
         out = to_int8(tiny_detector_onnx, str(tmp_path / "int8_trt.onnx"), n_calib=8, quantize_bias=False)
         m = onnx.load(out)
         inits = {i.name: i.data_type for i in m.graph.initializer}
@@ -212,15 +212,15 @@ class TestQuantize:
     def test_full_int8_collapses_scores(self, tiny_detector_onnx, tmp_path):
         """Regression test for the finding behind keep_head_tail_fp32: one INT8
         scale on the [boxes(0-640) | scores(0-1)] concat rounds scores to 0."""
-        from nurosim.deploy.quantize import to_int8
-        from nurosim.inference.runtime import OrtRuntime
+        from detect2deploy.deploy.quantize import to_int8
+        from detect2deploy.inference.runtime import OrtRuntime
         out = to_int8(tiny_detector_onnx, str(tmp_path / "int8_full.onnx"),
                       n_calib=8, keep_head_tail_fp32=False)
         x, _ = preprocess_batch([generate_scenario(1, seed=1).frame])
         assert OrtRuntime(out).run(x)[:, 4:].max() == 0.0
 
     def test_calibration_reader_is_weather_stratified_and_chunkable(self):
-        from nurosim.deploy.quantize import ScenarioCalibrationReader
+        from detect2deploy.deploy.quantize import ScenarioCalibrationReader
         r = ScenarioCalibrationReader("images", n_frames=8)
         assert len(r) == 8
         r.set_range(4, 8)
@@ -235,7 +235,7 @@ class TestQuantize:
 class TestParity:
 
     def test_identical_outputs_agree(self):
-        from nurosim.deploy.parity import detection_agreement, tensor_parity
+        from detect2deploy.deploy.parity import detection_agreement, tensor_parity
         dets = [[BBox(10, 10, 50, 40, 0, "vehicle", 0.9)], []]
         a = detection_agreement(dets, dets)
         assert a["ref_recall"] == 1.0 and a["mean_abs_conf_delta"] == 0.0
@@ -244,7 +244,7 @@ class TestParity:
         assert t["box_mae_px"] == 0.0 and t["class_agreement"] == 1.0
 
     def test_class_flip_is_not_a_match(self):
-        from nurosim.deploy.parity import detection_agreement
+        from detect2deploy.deploy.parity import detection_agreement
         ref = [[BBox(10, 10, 50, 40, 0, "vehicle", 0.9)]]
         tgt = [[BBox(10, 10, 50, 40, 2, "cyclist", 0.9)]]
         assert detection_agreement(ref, tgt)["ref_recall"] == 0.0
@@ -259,8 +259,8 @@ class TestGate:
                                "max_ap50_drop_per_class": 0.03}}
 
     def _setup(self, model_path, map50_drop=0.0, provider_active=True, p99=10.0, sha=None):
-        from nurosim.deploy.config import Profile, Target
-        from nurosim.deploy.export import sha256_file
+        from detect2deploy.deploy.config import Profile, Target
+        from detect2deploy.deploy.export import sha256_file
         sha = sha or sha256_file(model_path)
         profile = Profile("t", "", "ref", [
             Target("ref", "fp32", model_path, p99_budget_ms=50),
@@ -277,7 +277,7 @@ class TestGate:
         return profile, parity, bench
 
     def _run(self, *args, **kw):
-        from nurosim.deploy.gate import run_gate
+        from detect2deploy.deploy.gate import run_gate
         profile, parity, bench = self._setup(*args, **kw)
         return run_gate(self.CFG, profile, parity, bench)
 
@@ -301,7 +301,7 @@ class TestGate:
         assert failed == {"freshness"}
 
     def test_negative_control(self, tiny_detector_onnx):
-        from nurosim.deploy.gate import run_gate
+        from detect2deploy.deploy.gate import run_gate
         for drop, should_pass in ((0.5, True), (0.0, False)):
             profile, parity, bench = self._setup(tiny_detector_onnx, map50_drop=drop)
             profile.targets[1].expect_fail = True
@@ -311,6 +311,6 @@ class TestGate:
             assert "mAP@0.5 drop" not in checks and "e2e p99 latency" not in checks
 
     def test_missing_reports_fail(self, tiny_detector_onnx):
-        from nurosim.deploy.gate import run_gate
+        from detect2deploy.deploy.gate import run_gate
         profile, _, _ = self._setup(tiny_detector_onnx)
         assert not any(c.passed for c in run_gate(self.CFG, profile, None, None))

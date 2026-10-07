@@ -1,10 +1,10 @@
-#include "nurosim/postprocess.h"
+#include "detect2deploy/postprocess.h"
 
 #include <algorithm>
 #include <cmath>
 #include <numeric>
 
-namespace nurosim {
+namespace detect2deploy {
 
 namespace {
 constexpr float kMaxWH = 4096.f;   // class offset for batched NMS
@@ -95,4 +95,4 @@ std::vector<Detection> from_efficient_nms(int num, const float* boxes, const flo
   return dets;
 }
 
-}  // namespace nurosim
+}  // namespace detect2deploy

@@ -2,9 +2,9 @@ version: "3.9"
 
 services:
 
-  nurosim:
+  detect2deploy:
     build: .
-    container_name: nurosim-eval
+    container_name: d2d-eval
     volumes:
       - ./outputs:/app/outputs
       - ./mlruns:/app/mlruns
@@ -15,7 +15,7 @@ services:
 
   mlflow-ui:
     image: python:3.11-slim
-    container_name: nurosim-mlflow
+    container_name: d2d-mlflow
     working_dir: /mlruns
     volumes:
       - ./mlruns:/mlruns
@@ -25,4 +25,4 @@ services:
       bash -c "pip install mlflow --quiet &&
                mlflow ui --host 0.0.0.0 --port 5000 --backend-store-uri /mlruns"
     depends_on:
-      - nurosim
+      - detect2deploy

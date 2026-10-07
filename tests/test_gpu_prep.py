@@ -10,11 +10,11 @@ import os
 import numpy as np
 import pytest
 
-from nurosim.scenario_generator import generate_scenario
+from detect2deploy.scenario_generator import generate_scenario
 
 
 def test_frames_roundtrip(tmp_path):
-    from nurosim.deploy.trt_prep import read_frames, write_frames
+    from detect2deploy.deploy.trt_prep import read_frames, write_frames
     frames = [generate_scenario(i, seed=i).frame for i in range(3)]
     p = write_frames(str(tmp_path / "f.nsfr"), frames)
     back = read_frames(p)
@@ -28,7 +28,7 @@ def test_efficient_nms_graph(tiny_detector_onnx, tmp_path):
     onnx = pytest.importorskip("onnx")
     import onnxruntime as ort
     from onnx.utils import extract_model
-    from nurosim.deploy.trt_prep import NMS_OUTPUTS, add_efficient_nms
+    from detect2deploy.deploy.trt_prep import NMS_OUTPUTS, add_efficient_nms
 
     out = add_efficient_nms(tiny_detector_onnx, str(tmp_path / "nms.onnx"), 0.3, 0.5, max_det=50)
     m = onnx.load(out)
@@ -56,12 +56,12 @@ def _write_dets(path, frames):
     return path
 
 
-@pytest.mark.skipif(not os.path.exists("models/nurosim_det_fp32.onnx"), reason="needs the FP32 model")
+@pytest.mark.skipif(not os.path.exists("models/d2d_det_fp32.onnx"), reason="needs the FP32 model")
 def test_cpp_parity_scores_dumped_detections(tmp_path):
-    from nurosim.deploy.config import load_config
-    from nurosim.deploy.cpp_parity import run_cpp_parity
-    from nurosim.deploy.seeds import EVAL_SEED
-    from nurosim.inference.detector import InferenceDetector
+    from detect2deploy.deploy.config import load_config
+    from detect2deploy.deploy.cpp_parity import run_cpp_parity
+    from detect2deploy.deploy.seeds import EVAL_SEED
+    from detect2deploy.inference.detector import InferenceDetector
 
     cfg = load_config()
     det = InferenceDetector(cfg["models"]["fp32"], conf_threshold=cfg["eval"]["conf_threshold"])
@@ -70,7 +70,7 @@ def test_cpp_parity_scores_dumped_detections(tmp_path):
     empty = _write_dets(str(tmp_path / "dets_empty.json"), [[] for _ in preds])
 
     rep = run_cpp_parity(cfg, [same, empty])
-    from nurosim.deploy.cpp_parity import write_cpp_parity
+    from detect2deploy.deploy.cpp_parity import write_cpp_parity
     with open(write_cpp_parity(rep, str(tmp_path / "out"))) as f:      # NumPy-safe JSON
         assert json.load(f)["targets"]["same"]["within_budget"] is True
     assert rep["n_frames"] == 6
@@ -81,7 +81,7 @@ def test_cpp_parity_scores_dumped_detections(tmp_path):
 
 
 def test_gpu_summary_renders(tmp_path):
-    from nurosim.deploy.gpu_report import build_summary
+    from detect2deploy.deploy.gpu_report import build_summary
     summ = {"n": 10, "mean": 1, "std": 0.1, "p50": 1, "p90": 1.1, "p99": 1.2, "max": 1.3, "jitter_p99_p50": 0.2}
     dev = {"name": "NVIDIA L4", "compute_capability": "8.9", "sms": 58, "integrated": False,
            "cuda_driver": 12080, "cuda_runtime": 12080, "tensorrt": "10.8.0"}

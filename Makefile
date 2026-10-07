@@ -16,7 +16,7 @@ test:
 	$(PY) -m pytest tests/ -v --tb=short
 
 test-cov:
-	$(PY) -m pytest tests/ -v --cov=nurosim --cov-report=term-missing
+	$(PY) -m pytest tests/ -v --cov=detect2deploy --cov-report=term-missing
 
 # ── Evaluation pipeline (original) ─────────────────────────────────────────────
 run:
@@ -26,7 +26,7 @@ run-fast:
 	$(PY) main.py --n 50 --workers 2 --save-frames
 
 run-model:
-	$(PY) main.py --n 500 --workers 4 --save-frames --model models/nurosim_det_int8.onnx
+	$(PY) main.py --n 500 --workers 4 --save-frames --model models/d2d_det_int8.onnx
 
 run-mlflow:
 	$(PY) main.py --n 500 --workers 4 --save-frames --mlflow
@@ -36,53 +36,53 @@ mlflow-ui:
 
 # ── Model deployment pipeline ──────────────────────────────────────────────────
 dataset:
-	$(PY) -m nurosim.deploy dataset
+	$(PY) -m detect2deploy.deploy dataset
 
 train:
-	$(PY) -m nurosim.deploy train
+	$(PY) -m detect2deploy.deploy train
 
 export:
-	$(PY) -m nurosim.deploy export
+	$(PY) -m detect2deploy.deploy export
 
 quantize:
-	$(PY) -m nurosim.deploy quantize
+	$(PY) -m detect2deploy.deploy quantize
 
 parity:
-	$(PY) -m nurosim.deploy parity --profile $(PROFILE)
+	$(PY) -m detect2deploy.deploy parity --profile $(PROFILE)
 
 bench:
-	$(PY) -m nurosim.deploy bench --profile $(PROFILE)
+	$(PY) -m detect2deploy.deploy bench --profile $(PROFILE)
 
 gate:
-	$(PY) -m nurosim.deploy gate --profile $(PROFILE)
+	$(PY) -m detect2deploy.deploy gate --profile $(PROFILE)
 
 deploy:            ## quantize → parity → bench → gate
-	$(PY) -m nurosim.deploy all --profile $(PROFILE)
+	$(PY) -m detect2deploy.deploy all --profile $(PROFILE)
 
 ci-gate:
-	$(PY) -m nurosim.deploy all --profile ci-cpu
+	$(PY) -m detect2deploy.deploy all --profile ci-cpu
 
 # ── GPU / TensorRT (Tier 2) ───────────────────────────────────────────────────
 cpp-test:          ## host-only C++ build + tests (no CUDA needed)
-	cmake -S gpu -B build/cpp-host -DNUROSIM_HOST_ONLY=ON && cmake --build build/cpp-host -j4
+	cmake -S gpu -B build/cpp-host -DD2D_HOST_ONLY=ON && cmake --build build/cpp-host -j4
 	ctest --test-dir build/cpp-host --output-on-failure --no-tests=error
 
 gpu-run:           ## everything, on a machine with an NVIDIA GPU (or Jetson)
 	bash scripts/gpu/run_all.sh
 
 gpu-docker-build:
-	docker build -f gpu/Dockerfile -t nurosim-gpu .
+	docker build -f gpu/Dockerfile -t d2d-gpu .
 
 gpu-docker-run:
-	docker run --rm --gpus all -v "$(PWD)/reports:/workspace/nurosim/reports" \
-	           -v "$(PWD)/build:/workspace/nurosim/build" nurosim-gpu
+	docker run --rm --gpus all -v "$(PWD)/reports:/workspace/detect2deploy/reports" \
+	           -v "$(PWD)/build:/workspace/detect2deploy/build" d2d-gpu
 
 # ── AI platform (Tier 3) ──────────────────────────────────────────────────────
 install-platform:
 	pip install -r requirements-platform.txt
 
 platform-smoke:    ## real Triton (PyTriton) on CPU + load + shadow; Linux only
-	$(PY) -m nurosim.platform smoke
+	$(PY) -m detect2deploy.platform smoke
 
 platform-colab:
 	bash scripts/platform/colab_run.sh
@@ -92,12 +92,12 @@ platform-vm:
 
 # ── Docker ─────────────────────────────────────────────────────────────────────
 docker-build:
-	docker build -t nurosim-lite:latest .
+	docker build -t detect2deploy:latest .
 
 docker-run:
 	docker-compose up --build
 
 # ── Cleanup ────────────────────────────────────────────────────────────────────
 clean:
-	rm -rf outputs/ mlruns/ __pycache__ nurosim/__pycache__ tests/__pycache__
+	rm -rf outputs/ mlruns/ __pycache__ detect2deploy/__pycache__ tests/__pycache__
 	find . -name "*.pyc" -delete

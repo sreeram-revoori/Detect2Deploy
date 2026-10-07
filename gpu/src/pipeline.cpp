@@ -1,13 +1,13 @@
-#include "nurosim/pipeline.h"
+#include "detect2deploy/pipeline.h"
 
 #include <chrono>
 #include <cstring>
 #include <sstream>
 #include <stdexcept>
 
-#include "nurosim/preprocess_gpu.h"
+#include "detect2deploy/preprocess_gpu.h"
 
-namespace nurosim {
+namespace detect2deploy {
 
 namespace {
 using Clock = std::chrono::steady_clock;
@@ -195,4 +195,4 @@ std::string device_json() {
   return o.str();
 }
 
-}  // namespace nurosim
+}  // namespace detect2deploy
