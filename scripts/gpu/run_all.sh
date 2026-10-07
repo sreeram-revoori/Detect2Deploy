@@ -72,9 +72,12 @@ fi
 if [ "${SKIP_PIP:-0}" != 1 ]; then
   step "pip install" $PY -m pip install -q -r requirements-gpu.txt
 fi
-ORT_GPU=0
-$PY -c "import onnxruntime as o, sys; sys.exit('CUDAExecutionProvider' not in o.get_available_providers())" \
-  2>/dev/null && ORT_GPU=1
+ORT_GPU=0   # the CUDA EP must actually start a session, not just be compiled in
+$PY -c "
+import sys
+from nurosim.inference.runtime import OrtRuntime
+sys.exit(0 if OrtRuntime('models/nurosim_det_fp32.onnx', provider='cuda').provider_active else 1)
+" > /dev/null 2>&1 && ORT_GPU=1
 step "quantize (FP16 / INT8 variants)" $PY -m nurosim.deploy quantize
 step "trt-prep (frames + EfficientNMS graphs)" $PY -m nurosim.deploy trt-prep --out "$BUILD"
 step "python unit tests" $PY -m pytest -q tests

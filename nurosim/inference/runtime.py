@@ -70,6 +70,15 @@ class OrtRuntime:
         except ImportError as e:
             raise ImportError("onnxruntime is required: pip install onnxruntime") from e
 
+        if provider in ("cuda", "tensorrt") and hasattr(ort, "preload_dlls"):
+            # Load the CUDA / cuDNN runtime libs this onnxruntime-gpu build needs
+            # from the nvidia-* pip wheels when present (e.g. a CUDA 12 ORT build
+            # on a CUDA 13 host). No-op when they aren't installed.
+            try:
+                ort.preload_dlls()
+            except Exception:                         # pragma: no cover
+                pass
+
         if provider not in PROVIDERS:
             raise ValueError(f"unknown provider '{provider}', expected one of {list(PROVIDERS)}")
         ep_name = PROVIDERS[provider]

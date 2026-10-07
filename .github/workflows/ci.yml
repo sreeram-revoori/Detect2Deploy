@@ -46,9 +46,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 8.6 = JetPack 6.0 (Jetson Orin) · 10.8 = TensorRT container 25.01 · latest = newest in NVIDIA's repo
-        trt: ["8.6", "10.8", "latest"]
-    name: cpp (TensorRT ${{ matrix.trt }})
+        include:   # TensorRT header version × nvcc version
+          - {trt: "8.6",    cuda: "12.8", pat: '^8\.6\..*cuda12'}      # JetPack 6.0 (Jetson Orin)
+          - {trt: "10.8",   cuda: "12.8", pat: '^10\.8\..*cuda12'}     # TensorRT container 25.01
+          - {trt: "10.14",  cuda: "13.0", pat: '^10\.14\..*cuda13\.0'} # Google Colab (CUDA 13.0)
+          - {trt: "latest", cuda: "12.8", pat: 'cuda12'}                # newest release
+    name: cpp (TensorRT ${{ matrix.trt }}, CUDA ${{ matrix.cuda }})
     steps:
       - uses: actions/checkout@v4
       - name: Host library + tests (no CUDA)
@@ -61,12 +64,12 @@ jobs:
           wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
           sudo dpkg -i cuda-keyring_1.1-1_all.deb
           sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends cuda-nvcc-12-8 cuda-cudart-dev-12-8 cuda-nvtx-12-8
-          echo /usr/local/cuda-12.8/bin >> "$GITHUB_PATH"
+          c=$(echo "${{ matrix.cuda }}" | tr . -)
+          sudo apt-get install -y -q --no-install-recommends cuda-nvcc-$c cuda-cudart-dev-$c cuda-nvtx-$c
+          echo "/usr/local/cuda-${{ matrix.cuda }}/bin" >> "$GITHUB_PATH"
       - name: TensorRT headers (no libraries)
         run: |
-          if [ "${{ matrix.trt }}" = latest ]; then pat='cuda12'; else pat="^${{ matrix.trt }}\..*cuda12"; fi
-          ver=$(apt-cache madison libnvinfer-headers-dev | awk '{print $3}' | grep -m1 -E "$pat")
+          ver=$(apt-cache madison libnvinfer-headers-dev | awk '{print $3}' | grep -m1 -E '${{ matrix.pat }}')
           echo "TensorRT headers $ver"
           mkdir -p trt && cd trt
           apt-get download "libnvinfer-headers-dev=$ver" "libnvinfer-headers-plugin-dev=$ver" "libnvonnxparsers-dev=$ver"
@@ -75,5 +78,5 @@ jobs:
       - name: Compile GPU sources (no link)
         run: |
           cmake -S gpu -B build-gpu -DNUROSIM_COMPILE_ONLY=ON -DTENSORRT_ROOT="$PWD/trt/usr" \
-                -DCMAKE_CUDA_ARCHITECTURES="75;87;89" -DCMAKE_CUDA_COMPILER=/usr/local/cuda-12.8/bin/nvcc
+                -DCMAKE_CUDA_ARCHITECTURES="75;87;89" -DCMAKE_CUDA_COMPILER="/usr/local/cuda-${{ matrix.cuda }}/bin/nvcc"
           cmake --build build-gpu -j4 -- -k
