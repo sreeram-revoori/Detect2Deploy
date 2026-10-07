@@ -56,3 +56,4 @@ models/*
 build/
 *.engine
 *.nsfr
+infra/vm/model_repository/

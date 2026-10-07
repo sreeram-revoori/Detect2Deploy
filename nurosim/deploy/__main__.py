@@ -84,13 +84,14 @@ def cmd_bench(args, cfg):
 
 
 def cmd_gate(args, cfg):
-    from nurosim.deploy.gate import gate_markdown, load_reports, run_gate
+    from nurosim.deploy.gate import gate_markdown, load_reports, run_gate, write_gate_json
     profile = _profile(args, cfg)
     parity, bench = load_reports(profile.name, args.reports)
     checks = run_gate(cfg, profile, parity, bench)
     md = gate_markdown(profile, checks)
     with open(os.path.join(args.reports, f"gate_{profile.name}.md"), "w") as f:
         f.write(md)
+    write_gate_json(profile, checks, os.path.join(args.reports, f"gate_{profile.name}.json"), parity)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
             f.write(md + "\n")

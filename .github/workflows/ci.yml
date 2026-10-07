@@ -80,3 +80,23 @@ jobs:
           cmake -S gpu -B build-gpu -DNUROSIM_COMPILE_ONLY=ON -DTENSORRT_ROOT="$PWD/trt/usr" \
                 -DCMAKE_CUDA_ARCHITECTURES="75;87;89" -DCMAKE_CUDA_COMPILER="/usr/local/cuda-${{ matrix.cuda }}/bin/nvcc"
           cmake --build build-gpu -j4 -- -k
+
+  # Tier 3 on CPU: unit tests, then a real PyTriton (Triton Inference Server)
+  # serving two models, driven by the gRPC load generator and the shadow check.
+  platform:
+    needs: tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-platform.txt
+      - run: python -m pytest tests/test_platform.py -q
+      - name: Serving environment (Python 3.12, numpy < 2 for PyTriton)
+        run: echo "NUROSIM_SERVE_PYTHON=$(bash scripts/platform/make_serve_env.sh --cpu | tail -1)" >> "$GITHUB_ENV"
+      - name: PyTriton serving smoke test
+        run: python -m nurosim.platform smoke
+      - if: failure()
+        run: cat build/platform_smoke/server.log || true
