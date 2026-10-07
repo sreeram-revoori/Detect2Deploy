@@ -105,7 +105,7 @@ def prepare(cfg: Dict, out_dir: str = "build/gpu", n_bench: int = 64) -> Dict[st
     deploy, ev = cfg["deploy"], cfg["eval"]
     # fp32 + flags drives TensorRT <= 10 (weakly typed); the fp16 / fp16_mixed /
     # int8 graphs carry their own precision for strongly typed builds (TRT >= 11).
-    for variant in ("fp32", "fp16", "fp16_mixed", "int8"):
+    for variant in ("fp32", "fp16", "fp16_mixed", "int8_trt"):
         src = cfg["models"][variant]
         if not os.path.exists(src):
             logger.warning("%s missing — run `quantize` first; skipping its NMS graphs", src)

@@ -11,12 +11,13 @@ for the same reason.
 FP16 comes in the same two flavours (fp16 / fp16_mixed): the decode tail
 holds pixel coordinates, and FP16's 0.5 px step above 512 hurts tiny boxes.
 
-Two INT8 variants are produced so the parity report can show the trade-off:
+INT8 variants (the first two let the parity report show the trade-off):
     int8       – backbone + neck + head convs in INT8; the head "tail" (DFL
                  softmax, box decode arithmetic, class sigmoid, concat) stays
                  FP32. Those ops carry pixel coordinates and probabilities
                  whose dynamic range a single INT8 scale represents poorly.
     int8_full  – every quantisable op in INT8 (the naive baseline).
+    int8_trt   – as int8, but conv biases stay float (what TensorRT expects).
 """
 
 from __future__ import annotations
@@ -163,7 +164,13 @@ def to_int8(fp32_path: str,
             per_channel: bool = True,
             symmetric_activations: bool = True,
             keep_head_tail_fp32: bool = True,
+            quantize_bias: bool = True,
             imgsz: int = 640) -> str:
+    """quantize_bias=False keeps conv biases in float. TensorRT's ONNX parser
+    rejects the INT32 bias DequantizeLinear nodes ORT emits by default
+    ("IDequantizeLayer can only run in INT8/FP8/FP4/INT4"). On the ORT CPU EP
+    both forms measured identical (mAP@0.5 0.9585, 12.6 ms on M4); int8 keeps
+    INT32 biases only so the committed CPU reports stay valid."""
     import onnx
     from onnxruntime.quantization import (CalibrationMethod, QuantFormat,
                                           QuantType, quantize_static)
@@ -193,6 +200,7 @@ def to_int8(fp32_path: str,
             extra_options={
                 "ActivationSymmetric": symmetric_activations,
                 "WeightSymmetric": True,
+                "QuantizeBias": quantize_bias,
                 # Calibrate in chunks: the calibrator keeps every intermediate
                 # activation of every frame in memory (~GBs for 128 frames).
                 # NB: don't use CalibMaxIntermediateOutputs for this — in ORT
@@ -201,7 +209,7 @@ def to_int8(fp32_path: str,
             },
         )
 
-    variant = "int8" if keep_head_tail_fp32 else "int8_full"
+    variant = ("int8" if keep_head_tail_fp32 else "int8_full") + ("" if quantize_bias else "_trt")
     _tag_variant(out_path, variant, {
         "calib_frames": str(n_calib), "calib_method": method,
         "fp32_excluded_nodes": str(len(exclude)),

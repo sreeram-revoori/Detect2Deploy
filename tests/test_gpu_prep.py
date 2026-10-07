@@ -70,6 +70,9 @@ def test_cpp_parity_scores_dumped_detections(tmp_path):
     empty = _write_dets(str(tmp_path / "dets_empty.json"), [[] for _ in preds])
 
     rep = run_cpp_parity(cfg, [same, empty])
+    from nurosim.deploy.cpp_parity import write_cpp_parity
+    with open(write_cpp_parity(rep, str(tmp_path / "out"))) as f:      # NumPy-safe JSON
+        assert json.load(f)["targets"]["same"]["within_budget"] is True
     assert rep["n_frames"] == 6
     assert rep["targets"]["same"]["delta_vs_reference"]["map50_drop"] == pytest.approx(0.0)
     assert rep["targets"]["same"]["detection_agreement"]["ref_recall"] == 1.0
@@ -91,7 +94,10 @@ def test_gpu_summary_renders(tmp_path):
               {"name": "b_solo", "a": summ, "a_frames": 0, "a_deadline_misses": 0, "b_fps": 900}]
     (tmp_path / "multistream.json").write_text(json.dumps(
         {"rate_a_hz": 30, "batch_b": 8, "duration_s": 8, "phases": phases}))
-    (tmp_path / "run.log").write_text("[t] ✓ build\n[t] ✗ nsys profile (exit 127) — continuing\n")
+    (tmp_path / "run.log").write_text(
+        "[t] ✓ build\n[t] ✗ nsys profile (exit 127)\n"
+        "[t] ⚠ ORT gate (nvidia-trt profile): FAIL — a model missed its budget (see the gate report)\n")
     md = build_summary(str(tmp_path))
     assert "NVIDIA L4" in md and "fp16 nms gpu-pre graph" in md
     assert "| 8 |" in md and "a_solo" in md and "nsys profile" in md
+    assert "## Gate verdicts" in md and "ORT gate (nvidia-trt profile): FAIL" in md

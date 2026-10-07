@@ -248,7 +248,7 @@ NuroSim-Lite/
 ├── scripts/
 │   ├── cpu_batch_scaling.py
 │   └── gpu/run_all.sh          # every GPU experiment, one command
-├── tests/                      # 58 Python tests; a tiny generated ONNX model stands in for CI
+├── tests/                      # 59 Python tests; a tiny generated ONNX model stands in for CI
 ├── main.py                     # original evaluation pipeline (--model for a real detector)
 └── .github/workflows/ci.yml    # tests + deploy gate
 ```

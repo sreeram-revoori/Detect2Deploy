@@ -63,6 +63,8 @@ def cmd_quantize(args, cfg):
     to_fp16(fp32, m["fp16_mixed"], keep_head_tail_fp32=True)
     to_int8(fp32, m["int8"], keep_head_tail_fp32=True, **common)
     to_int8(fp32, m["int8_full"], keep_head_tail_fp32=False, **common)
+    if "int8_trt" in m:
+        to_int8(fp32, m["int8_trt"], keep_head_tail_fp32=True, quantize_bias=False, **common)
 
 
 def cmd_parity(args, cfg):

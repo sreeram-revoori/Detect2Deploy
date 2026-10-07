@@ -23,6 +23,7 @@ silently drift from the model it claims to come from.
 | `nurosim_det_fp16.onnx` | all ops FP16, FP32 I/O | 6.1 MB |
 | `nurosim_det_fp16_mixed.onnx` | FP16, Detect-head tail (24 nodes) kept FP32 | 6.2 MB |
 | `nurosim_det_int8.onnx` | INT8 QDQ, per-channel symmetric, 128 weather-stratified calibration frames, head tail FP32 | 3.5 MB |
+| `nurosim_det_int8_trt.onnx` | as `int8` but conv biases stay float — TensorRT's parser rejects INT32 bias `DequantizeLinear`; identical accuracy and CPU latency | 3.4 MB |
 | `nurosim_det_int8_full.onnx` | INT8 QDQ, every op quantised — **known broken**, kept as the gate's negative control | 3.4 MB |
 
 ## Known limitations

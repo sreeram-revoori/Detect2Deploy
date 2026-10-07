@@ -89,6 +89,9 @@ continues, so one problem doesn't cost the rest of the session.
   `fp16` / `fp16_mixed` / Q/DQ ONNX variants, whose graphs already carry the precision.
   `run_all.sh` picks the recipe automatically. CI compiles against TensorRT 8.6 (JetPack 6.0),
   10.8 (the container) and the latest release.
+* **INT8 conv biases stay float** for TensorRT (`int8_trt`): ONNX Runtime's quantizer
+  emits INT32 bias `DequantizeLinear` nodes by default, which TensorRT's parser rejects
+  ("IDequantizeLayer can only run in INT8/FP8/FP4/INT4") — found on the first Colab run.
 * **INT8** — the Tier-1 QDQ model (symmetric, per-channel) is consumed as explicit
   quantisation; no TensorRT calibrator, so ORT-CPU, ORT-TensorRT and native TensorRT
   all use the same scales.

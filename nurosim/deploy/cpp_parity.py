@@ -69,7 +69,7 @@ def run_cpp_parity(cfg: Dict[str, Any], det_files: Sequence[str]) -> Dict[str, A
             "delta_vs_reference": d,
             "detection_agreement": detection_agreement(
                 ref_deploy, [[b for b in p if b.confidence >= deploy_conf] for p in preds]),
-            "within_budget": (d["map50_drop"] <= budget["max_map50_drop"]
+            "within_budget": bool(d["map50_drop"] <= budget["max_map50_drop"]
                               and max(d["weather_map50_drop"].values()) <= budget["max_map50_drop_per_weather"]
                               and max(d["per_class_ap50_drop"].values()) <= budget["max_ap50_drop_per_class"]),
         }
@@ -100,11 +100,19 @@ def cpp_parity_markdown(report: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _json_default(o):
+    """NumPy scalars (np.bool is not a Python bool under NumPy 2) → Python."""
+    import numpy as np
+    if isinstance(o, np.generic):
+        return o.item()
+    raise TypeError(f"not JSON serializable: {type(o).__name__}")
+
+
 def write_cpp_parity(report: Dict[str, Any], out_dir: str) -> str:
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, "parity_cpp.json")
     with open(path, "w") as f:
-        json.dump(report, f, indent=2)
+        json.dump(report, f, indent=2, default=_json_default)
     with open(os.path.join(out_dir, "parity_cpp.md"), "w") as f:
         f.write(cpp_parity_markdown(report))
     return path

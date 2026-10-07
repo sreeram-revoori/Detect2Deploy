@@ -51,6 +51,12 @@ step() {           # step "<name>" cmd...   — run, log, never abort the script
   return $rc
 }
 
+verdict() {        # a release-gate verdict: a FAIL is a result, not a broken run
+  local name=$1; shift
+  log "▶ $name"
+  if "$@" >> "$OUT/run.log" 2>&1; then log "✓ $name: PASS"; else log "⚠ $name: FAIL — a model missed its budget (see the gate report)"; fi
+}
+
 log "GPU: $GPU_NAME  →  $OUT   (quick=$QUICK)"
 
 # ── 0. environment ───────────────────────────────────────────────────────────
@@ -85,7 +91,7 @@ step "python unit tests" $PY -m pytest -q tests
 if [ "$ORT_GPU" = 1 ]; then
   step "ORT parity (nvidia-trt profile)" $PY -m nurosim.deploy --reports "$OUT" parity --profile nvidia-trt
   step "ORT benchmark (nvidia-trt profile)" $PY -m nurosim.deploy --reports "$OUT" bench --profile nvidia-trt
-  step "ORT gate (nvidia-trt profile)" $PY -m nurosim.deploy --reports "$OUT" gate --profile nvidia-trt
+  verdict "ORT gate (nvidia-trt profile)" $PY -m nurosim.deploy --reports "$OUT" gate --profile nvidia-trt
 else
   log "onnxruntime-gpu not available — skipping the ORT CUDA/TensorRT EP profile"
   [ "$JETSON" = 1 ] && log "  (Jetson: install the onnxruntime-gpu wheel for your JetPack from the Jetson AI Lab index)"
@@ -116,11 +122,11 @@ if [ "$TRT_MAJOR" -ge 11 ]; then
   build fp16                 --onnx models/nurosim_det_fp16.onnx --max-batch 8
   build fp16_nms             --onnx "$BUILD/nurosim_det_fp16_nms.onnx"
   build fp16_mixed_nms       --onnx "$BUILD/nurosim_det_fp16_mixed_nms.onnx"
-  build int8_nms             --onnx "$BUILD/nurosim_det_int8_nms.onnx"
+  build int8_nms             --onnx "$BUILD/nurosim_det_int8_trt_nms.onnx"
   build fp32_nms_eval        --onnx "$BUILD/nurosim_det_fp32_nms_eval.onnx"
   build fp16_nms_eval        --onnx "$BUILD/nurosim_det_fp16_nms_eval.onnx"
   build fp16_mixed_nms_eval  --onnx "$BUILD/nurosim_det_fp16_mixed_nms_eval.onnx"
-  build int8_nms_eval        --onnx "$BUILD/nurosim_det_int8_nms_eval.onnx"
+  build int8_nms_eval        --onnx "$BUILD/nurosim_det_int8_trt_nms_eval.onnx"
   [ "$JETSON" = 1 ] && build fp16_mixed_nms_dla --onnx "$BUILD/nurosim_det_fp16_mixed_nms.onnx" --dla 0
 else
   # TensorRT 8.6 / 10.x: FP32 graph + builder precision flags, head tail pinned to FP32
@@ -128,11 +134,11 @@ else
   build fp16                 --onnx models/nurosim_det_fp32.onnx --max-batch 8 --fp16
   build fp16_nms             --onnx "$BUILD/nurosim_det_fp32_nms.onnx" --fp16
   build fp16_mixed_nms       --onnx "$BUILD/nurosim_det_fp32_nms.onnx" --fp16 --fp32-layers "$TAIL"
-  build int8_nms             --onnx "$BUILD/nurosim_det_int8_nms.onnx" --int8 --fp32-layers "$TAIL"
+  build int8_nms             --onnx "$BUILD/nurosim_det_int8_trt_nms.onnx" --int8 --fp32-layers "$TAIL"
   build fp32_nms_eval        --onnx "$BUILD/nurosim_det_fp32_nms_eval.onnx"
   build fp16_nms_eval        --onnx "$BUILD/nurosim_det_fp32_nms_eval.onnx" --fp16
   build fp16_mixed_nms_eval  --onnx "$BUILD/nurosim_det_fp32_nms_eval.onnx" --fp16 --fp32-layers "$TAIL"
-  build int8_nms_eval        --onnx "$BUILD/nurosim_det_int8_nms_eval.onnx" --int8 --fp32-layers "$TAIL"
+  build int8_nms_eval        --onnx "$BUILD/nurosim_det_int8_trt_nms_eval.onnx" --int8 --fp32-layers "$TAIL"
   if [ "$JETSON" = 1 ]; then
     build fp16_mixed_nms_dla --onnx "$BUILD/nurosim_det_fp32_nms.onnx" --fp16 --fp32-layers "$TAIL" --dla 0
   fi

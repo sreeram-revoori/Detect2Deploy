@@ -90,6 +90,9 @@ def build_summary(run_dir: str) -> str:
     if ort:
         lines += ["## ONNX Runtime CUDA / TensorRT EPs (Python harness, profile `nvidia-trt`)", "",
                   " · ".join(f"[{f}]({f})" for f in ort), ""]
+        gate = os.path.join(run_dir, "gate_nvidia-trt.md")
+        if os.path.exists(gate):
+            lines += open(gate).read().splitlines() + [""]
 
     prof = sorted(glob.glob(os.path.join(run_dir, "*.nsys-rep")))
     if prof:
@@ -101,7 +104,12 @@ def build_summary(run_dir: str) -> str:
 
     log = os.path.join(run_dir, "run.log")
     if os.path.exists(log):
-        failed = [l.split("✗", 1)[1].strip() for l in open(log) if "✗" in l]
+        text = open(log).read().splitlines()
+        failed = [l.split("✗", 1)[1].strip() for l in text if "✗" in l]
+        verdicts = [l.split("] ", 1)[-1].lstrip("✓⚠ ").strip() for l in text
+                    if l.endswith(": PASS") or ": FAIL" in l]
+        if verdicts:
+            lines += ["## Gate verdicts", ""] + [f"- {v}" for v in verdicts] + [""]
         lines += ["## Run status", "",
                   "All steps succeeded." if not failed else
                   "Failed steps (details in [`run.log`](run.log)):\n" + "\n".join(f"- {f}" for f in failed), ""]
