@@ -39,14 +39,20 @@ def compute_iou(box_a: BBox, box_b: BBox) -> float:
 
 
 def iou_matrix(preds: List[BBox], gts: List[BBox]) -> np.ndarray:
-    """Return NxM IoU matrix (N=preds, M=gts)."""
+    """Return NxM IoU matrix (N=preds, M=gts), vectorised with NumPy."""
     if not preds or not gts:
         return np.zeros((len(preds), len(gts)))
-    mat = np.zeros((len(preds), len(gts)))
-    for i, p in enumerate(preds):
-        for j, g in enumerate(gts):
-            mat[i, j] = compute_iou(p, g)
-    return mat
+    p = np.array([b.xyxy for b in preds], dtype=np.float64)       # (N, 4)
+    g = np.array([b.xyxy for b in gts],   dtype=np.float64)       # (M, 4)
+    ix1 = np.maximum(p[:, None, 0], g[None, :, 0])
+    iy1 = np.maximum(p[:, None, 1], g[None, :, 1])
+    ix2 = np.minimum(p[:, None, 2], g[None, :, 2])
+    iy2 = np.minimum(p[:, None, 3], g[None, :, 3])
+    inter  = np.clip(ix2 - ix1, 0, None) * np.clip(iy2 - iy1, 0, None)
+    area_p = np.clip(p[:, 2] - p[:, 0], 0, None) * np.clip(p[:, 3] - p[:, 1], 0, None)
+    area_g = np.clip(g[:, 2] - g[:, 0], 0, None) * np.clip(g[:, 3] - g[:, 1], 0, None)
+    union  = area_p[:, None] + area_g[None, :] - inter
+    return np.divide(inter, union, out=np.zeros_like(inter), where=union > 0)
 
 
 # ── Average Precision ─────────────────────────────────────────────────────────

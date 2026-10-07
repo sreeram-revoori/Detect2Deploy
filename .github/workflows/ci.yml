@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m pytest tests/ -q
+
+  # Model release gate: rebuild the INT8 artefact from the committed FP32
+  # model, then check accuracy parity + latency against configs/deploy.yaml.
+  deploy-gate:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: quantize → parity → benchmark → gate
+        run: python -m nurosim.deploy all --profile ci-cpu
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deploy-reports
+          path: reports/

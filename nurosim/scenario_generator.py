@@ -9,12 +9,12 @@ import numpy as np
 import cv2
 from dataclasses import dataclass, field
 from typing import List, Tuple
-import random
 
 # ── Canvas / world config ─────────────────────────────────────────────────────
 FRAME_W, FRAME_H = 640, 640          # pixels
-WORLD_RANGE       = 50.0             # metres represented by half the canvas
-SCALE             = FRAME_W / (2 * WORLD_RANGE)   # px per metre
+WORLD_RANGE       = 32.0             # metres represented by half the canvas
+SCALE             = FRAME_W / (2 * WORLD_RANGE)   # px per metre (10 px/m)
+MIN_HALF_PX       = 2                # smallest rendered half-extent → ≥4 px boxes
 
 # ── Object class palette (BGR) ────────────────────────────────────────────────
 CLASS_CONFIG = {
@@ -96,14 +96,17 @@ def _draw_road(canvas: np.ndarray, weather: str) -> None:
         cv2.line(canvas, (x, FRAME_H//4), (x + 20, FRAME_H//4), line_color, 1)
 
 
-def _apply_weather_fx(canvas: np.ndarray, weather: str) -> np.ndarray:
+def _apply_weather_fx(canvas: np.ndarray, weather: str,
+                      rng: np.random.Generator) -> np.ndarray:
     if weather == "rain":
-        noise = np.random.randint(0, 30, canvas.shape, dtype=np.uint8)
+        # Seeded RNG so rain frames are bit-identical across runs — parity
+        # checks between model variants depend on identical inputs.
+        noise = rng.integers(0, 30, canvas.shape, dtype=np.uint8)
         canvas = cv2.add(canvas, noise)
         # Rain streaks
         for _ in range(120):
-            x = random.randint(0, FRAME_W)
-            y = random.randint(0, FRAME_H)
+            x = int(rng.integers(0, FRAME_W + 1))
+            y = int(rng.integers(0, FRAME_H + 1))
             cv2.line(canvas, (x, y), (x - 2, y + 12), (180, 180, 200), 1)
     elif weather == "fog":
         fog_layer = np.full_like(canvas, 160)
@@ -136,8 +139,8 @@ def _place_object(canvas: np.ndarray,
     h_m = rng.uniform(*cfg["h_range"])
 
     cx, cy = _world_to_pixel(x_m, y_m)
-    half_w = int(w_m * SCALE / 2)
-    half_h = int(h_m * SCALE / 2)
+    half_w = max(MIN_HALF_PX, round(w_m * SCALE / 2))
+    half_h = max(MIN_HALF_PX, round(h_m * SCALE / 2))
 
     x1 = max(0, cx - half_w)
     y1 = max(0, cy - half_h)
@@ -148,10 +151,11 @@ def _place_object(canvas: np.ndarray,
     cv2.rectangle(canvas, (x1, y1), (x2, y2), cfg["color"], -1)
     cv2.rectangle(canvas, (x1, y1), (x2, y2), (255, 255, 255), 1)
 
-    # Class label
-    cv2.putText(canvas, class_name[0].upper(),
-                (x1 + 2, y2 - 2),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 0), 1)
+    # Class label (only where it fits inside the box)
+    if x2 - x1 >= 14 and y2 - y1 >= 10:
+        cv2.putText(canvas, class_name[0].upper(),
+                    (x1 + 2, y2 - 2),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 0), 1)
 
     return BBox(x1=x1, y1=y1, x2=x2, y2=y2,
                 class_id=cfg["id"], class_name=class_name)
@@ -183,9 +187,8 @@ def generate_scenario(scenario_id: int,
         Scenario dataclass
     """
     rng = np.random.default_rng(seed)
-    random.seed(seed)
 
-    weather     = weather     or rng.choice(WEATHER_CONDITIONS)
+    weather     = weather     or str(rng.choice(WEATHER_CONDITIONS))
     num_objects = num_objects or int(rng.integers(3, 13))
 
     # Background (grass/dirt)
@@ -205,7 +208,7 @@ def generate_scenario(scenario_id: int,
         bbox = _place_object(canvas, cls, rng)
         gt_boxes.append(bbox)
 
-    canvas = _apply_weather_fx(canvas, weather)
+    canvas = _apply_weather_fx(canvas, weather, rng)
     _draw_ego(canvas)
 
     # HUD overlay

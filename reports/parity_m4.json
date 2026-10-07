@@ -1,0 +1,399 @@
+{
+  "profile": "m4",
+  "reference": "fp32-cpu",
+  "host": "macOS-26.6.2-arm64-arm-64bit",
+  "eval": {
+    "n_scenarios": 300,
+    "conf_threshold": 0.01,
+    "raw_parity_frames": 16,
+    "seed": 100000,
+    "deploy_conf": 0.25
+  },
+  "accuracy_budget": {
+    "max_map50_drop": 0.01,
+    "max_map50_drop_per_weather": 0.02,
+    "max_ap50_drop_per_class": 0.03
+  },
+  "negative_controls": [
+    "int8_full-cpu"
+  ],
+  "targets": {
+    "fp32-cpu": {
+      "variant": "fp32",
+      "provider": "cpu",
+      "model_sha256": "4446d7299936",
+      "active_providers": [
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9651111259227652,
+        "map50_95": 0.8537083496271272,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702404526147982,
+          "cyclist": 0.9900990098977116,
+          "cone": 0.9100060312784226
+        },
+        "weather_map50": {
+          "clear": 0.9706935610472145,
+          "rain": 0.9646604382894133,
+          "fog": 0.9572259857458095,
+          "night": 0.9662357897756413
+        },
+        "n_gt": 2242
+      }
+    },
+    "fp16-cpu": {
+      "variant": "fp16",
+      "provider": "cpu",
+      "model_sha256": "e3721133721e",
+      "active_providers": [
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9657805608619637,
+        "map50_95": 0.8489266525879756,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702404526147982,
+          "cyclist": 0.9900990098977116,
+          "cone": 0.9126837710352169
+        },
+        "weather_map50": {
+          "clear": 0.9740971788348819,
+          "rain": 0.9646604382894133,
+          "fog": 0.9572259857458095,
+          "night": 0.9662357897756413
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": -0.0006694349391985766,
+        "map50_95_drop": 0.0047816970391515445,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": 0.0,
+          "cyclist": 0.0,
+          "cone": -0.002677739756794306
+        },
+        "weather_map50_drop": {
+          "clear": -0.003403617787667401,
+          "rain": 0.0,
+          "fog": 0.0,
+          "night": 0.0
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2250,
+        "ref_recall": 1.0,
+        "target_precision": 1.0,
+        "mean_match_iou": 0.9933760633639637,
+        "mean_abs_conf_delta": 0.0001414711210462782
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 0.028509575873613358,
+        "box_max_err_px": 0.251953125,
+        "score_mae": 3.6546765613820753e-07,
+        "score_max_err": 0.005201905965805054,
+        "class_agreement": 1.0
+      }
+    },
+    "int8-cpu": {
+      "variant": "int8",
+      "provider": "cpu",
+      "model_sha256": "6cd5fe89c272",
+      "active_providers": [
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.958527690961064,
+        "map50_95": 0.809525502076575,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702781706723489,
+          "cyclist": 0.9900990098977116,
+          "cone": 0.8836345733740671
+        },
+        "weather_map50": {
+          "clear": 0.9703191640653568,
+          "rain": 0.9492212379030134,
+          "fog": 0.9515435386754066,
+          "night": 0.9569127805889535
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": 0.006583434961701107,
+        "map50_95_drop": 0.04418284755055213,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": -3.771805755070634e-05,
+          "cyclist": 0.0,
+          "cone": 0.026371457904355466
+        },
+        "weather_map50_drop": {
+          "clear": 0.0003743969818577053,
+          "rain": 0.015439200386399898,
+          "fog": 0.005682447070402885,
+          "night": 0.009323009186687825
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2221,
+        "ref_recall": 0.9862222222222222,
+        "target_precision": 0.9990995047276002,
+        "mean_match_iou": 0.9762916846855352,
+        "mean_abs_conf_delta": 0.030485239072982766
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 0.14932633936405182,
+        "box_max_err_px": 1.7032012939453125,
+        "score_mae": 5.273128772387281e-05,
+        "score_max_err": 0.6155669093132019,
+        "class_agreement": 1.0
+      }
+    },
+    "int8_full-cpu": {
+      "variant": "int8_full",
+      "provider": "cpu",
+      "model_sha256": "f8f479e7f728",
+      "active_providers": [
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.0,
+        "map50_95": 0.0,
+        "per_class_ap50": {
+          "vehicle": 0.0,
+          "pedestrian": 0.0,
+          "cyclist": 0.0,
+          "cone": 0.0
+        },
+        "weather_map50": {
+          "clear": 0.0,
+          "rain": 0.0,
+          "fog": 0.0,
+          "night": 0.0
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": 0.9651111259227652,
+        "map50_95_drop": 0.8537083496271272,
+        "per_class_ap50_drop": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702404526147982,
+          "cyclist": 0.9900990098977116,
+          "cone": 0.9100060312784226
+        },
+        "weather_map50_drop": {
+          "clear": 0.9706935610472145,
+          "rain": 0.9646604382894133,
+          "fog": 0.9572259857458095,
+          "night": 0.9662357897756413
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 0,
+        "ref_recall": 0.0,
+        "target_precision": 1.0,
+        "mean_match_iou": 0.0,
+        "mean_abs_conf_delta": 0.0
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 2.7194395065307617,
+        "box_max_err_px": 10.74786376953125,
+        "score_mae": 0.001358435838483274,
+        "score_max_err": 0.9816352128982544,
+        "class_agreement": 0.9038701622971286
+      }
+    },
+    "fp32-coreml": {
+      "variant": "fp32",
+      "provider": "coreml",
+      "model_sha256": "4446d7299936",
+      "active_providers": [
+        "CoreMLExecutionProvider",
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9651111259227652,
+        "map50_95": 0.8537083496271272,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702404526147982,
+          "cyclist": 0.9900990098977116,
+          "cone": 0.9100060312784226
+        },
+        "weather_map50": {
+          "clear": 0.9706935610472145,
+          "rain": 0.9646604382894133,
+          "fog": 0.9572259857458095,
+          "night": 0.9662357897756413
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": 0.0,
+        "map50_95_drop": 0.0,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": 0.0,
+          "cyclist": 0.0,
+          "cone": 0.0
+        },
+        "weather_map50_drop": {
+          "clear": 0.0,
+          "rain": 0.0,
+          "fog": 0.0,
+          "night": 0.0
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2250,
+        "ref_recall": 1.0,
+        "target_precision": 1.0,
+        "mean_match_iou": 1.0,
+        "mean_abs_conf_delta": 1.0503662957085503e-07
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 2.8669760467892047e-06,
+        "box_max_err_px": 6.103515625e-05,
+        "score_mae": 2.6340615022490965e-08,
+        "score_max_err": 1.8924474716186523e-06,
+        "class_agreement": 1.0
+      }
+    },
+    "fp16-coreml": {
+      "variant": "fp16",
+      "provider": "coreml",
+      "model_sha256": "e3721133721e",
+      "active_providers": [
+        "CoreMLExecutionProvider",
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9573858909918924,
+        "map50_95": 0.8296018883214554,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9699519168126519,
+          "cyclist": 0.9900990098977116,
+          "cone": 0.8793936273570777
+        },
+        "weather_map50": {
+          "clear": 0.9685740941792529,
+          "rain": 0.9454569743832844,
+          "fog": 0.9507963131719014,
+          "night": 0.9633347784463442
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": 0.0077252349308727375,
+        "map50_95_drop": 0.024106461305671734,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": 0.0002885358021462725,
+          "cyclist": 0.0,
+          "cone": 0.0306124039213449
+        },
+        "weather_map50_drop": {
+          "clear": 0.0021194668679616058,
+          "rain": 0.019203463906128926,
+          "fog": 0.006429672573908141,
+          "night": 0.0029010113292970985
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2248,
+        "ref_recall": 0.9991111111111111,
+        "target_precision": 1.0,
+        "mean_match_iou": 0.9871649232058478,
+        "mean_abs_conf_delta": 0.0013345344343431479
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 0.07139173895120621,
+        "box_max_err_px": 0.46026611328125,
+        "score_mae": 6.466487320722081e-06,
+        "score_max_err": 0.025714606046676636,
+        "class_agreement": 1.0
+      }
+    },
+    "fp16_mixed-coreml": {
+      "variant": "fp16_mixed",
+      "provider": "coreml",
+      "model_sha256": "b45e802ade19",
+      "active_providers": [
+        "CoreMLExecutionProvider",
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9651833497663407,
+        "map50_95": 0.8533304101040684,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702593116435625,
+          "cyclist": 0.9900990098977116,
+          "cone": 0.9102760676239603
+        },
+        "weather_map50": {
+          "clear": 0.9707479361122384,
+          "rain": 0.9647458986114359,
+          "fog": 0.9572259857458095,
+          "night": 0.9662295219403436
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": -7.222384357552514e-05,
+        "map50_95_drop": 0.0003779395230587568,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": -1.885902876430645e-05,
+          "cyclist": 0.0,
+          "cone": -0.0002700363455376831
+        },
+        "weather_map50_drop": {
+          "clear": -5.4375065023926084e-05,
+          "rain": -8.546032202261244e-05,
+          "fog": 0.0,
+          "night": 6.267835297668611e-06
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2250,
+        "ref_recall": 1.0,
+        "target_precision": 1.0,
+        "mean_match_iou": 0.9984616017885871,
+        "mean_abs_conf_delta": 0.0005903696616490682
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 0.0036479411646723747,
+        "box_max_err_px": 0.0522918701171875,
+        "score_mae": 1.2174198218417587e-06,
+        "score_max_err": 0.027374863624572754,
+        "class_agreement": 1.0
+      }
+    }
+  }
+}

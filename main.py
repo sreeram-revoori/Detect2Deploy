@@ -7,6 +7,7 @@ Quick start:
     python main.py                          # 500 scenarios, 4 workers
     python main.py --n 100 --workers 2      # fast smoke test
     python main.py --n 1000 --workers 8 --mlflow  # full run with MLflow
+    python main.py --model models/nurosim_det_int8.onnx   # real detector (ONNX)
 """
 
 import argparse
@@ -19,9 +20,10 @@ import cv2
 import numpy as np
 
 from nurosim.scenario_generator import generate_scenario, WEATHER_CONDITIONS
-from nurosim.perception_model   import MockDetector, TimedDetector
+from nurosim.perception_model   import TimedDetector, build_detector
 from nurosim.metrics            import Evaluator
 from nurosim.ray_worker         import ParallelEvaluator
+from nurosim.deploy.seeds       import EVAL_SEED
 from nurosim.tracker            import (
     annotate_frame, log_to_mlflow,
     plot_per_class_ap, plot_weather_map, plot_latency_histogram,
@@ -41,22 +43,37 @@ def parse_args():
     p = argparse.ArgumentParser(description="NuroSim-Lite evaluation pipeline")
     p.add_argument("--n",        type=int,   default=500,   help="Number of scenarios")
     p.add_argument("--workers",  type=int,   default=4,     help="Parallel workers")
-    p.add_argument("--seed",     type=int,   default=42,    help="Base RNG seed")
+    p.add_argument("--seed",     type=int,   default=EVAL_SEED,
+                   help="Base RNG seed (default: held-out range, disjoint from training)")
     p.add_argument("--iou",      type=float, default=0.5,   help="IoU threshold")
     p.add_argument("--no-ray",   action="store_true",       help="Disable Ray, use multiprocessing")
     p.add_argument("--mlflow",   action="store_true",       help="Log to MLflow")
     p.add_argument("--save-frames", action="store_true",    help="Save annotated sample frames")
     p.add_argument("--output-dir", default="outputs",       help="Output directory")
+    p.add_argument("--model",    default=None,
+                   help="ONNX model to evaluate instead of the MockDetector")
+    p.add_argument("--provider", default="cpu",
+                   help="ONNX Runtime EP: cpu | coreml | cuda | tensorrt")
     return p.parse_args()
+
+
+def detector_spec(args) -> dict:
+    if args.model is None:
+        return {"kind": "mock"}
+    # One ORT session per worker; split the cores between workers instead of
+    # letting every session spawn a thread per core (oversubscription).
+    threads = max(1, (os.cpu_count() or 1) // max(1, args.workers))
+    return {"kind": "onnx", "model_path": args.model, "provider": args.provider,
+            "intra_op_threads": threads}
 
 
 # ── Demo: single scenario visual ─────────────────────────────────────────────
 
-def demo_single_scenario(output_dir: str) -> None:
+def demo_single_scenario(output_dir: str, spec: dict) -> None:
     logger.info("Generating demo scenarios for each weather condition …")
     os.makedirs(output_dir, exist_ok=True)
 
-    detector = TimedDetector(MockDetector(seed=99))
+    detector = TimedDetector(build_detector(spec, seed=99))
 
     for wx in WEATHER_CONDITIONS:
         sc    = generate_scenario(0, seed=999, weather=wx, num_objects=8)
@@ -81,7 +98,9 @@ def main():
     logger.info("=" * 56)
 
     # ── Step 1: demo frames ──
-    demo_single_scenario(args.output_dir)
+    spec = detector_spec(args)
+    logger.info("  Detector  : %s", args.model or "MockDetector")
+    demo_single_scenario(args.output_dir, spec)
 
     # ── Step 2: parallel evaluation ──
     logger.info("Launching parallel evaluator …")
@@ -91,6 +110,7 @@ def main():
         iou_thr=args.iou,
         base_seed=args.seed,
         use_ray=not args.no_ray,
+        detector_spec=spec,
     )
 
     result, stats = pe.run()
@@ -113,8 +133,7 @@ def main():
     # ── Step 5: save sample annotated frames ──
     if args.save_frames:
         from nurosim.scenario_generator import generate_scenario as gs
-        from nurosim.perception_model   import MockDetector, TimedDetector
-        det = TimedDetector(MockDetector(seed=0))
+        det = TimedDetector(build_detector(spec, seed=0))
         samples = []
         for sid in range(min(12, args.n)):
             sc    = gs(sid, seed=args.seed + sid)

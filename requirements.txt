@@ -1,15 +1,10 @@
+# Core: scenario generation, evaluation, ONNX inference + deploy pipeline
 numpy>=1.24
 opencv-python-headless>=4.8
 matplotlib>=3.7
-
-# ML tracking
-mlflow>=2.10
-
-# Parallel compute (optional but recommended)
-ray>=2.9
-
-# ONNX inference (optional — needed only for ONNXDetector)
-# onnxruntime>=1.17
+pyyaml>=6.0
+onnx>=1.16
+onnxruntime>=1.20          # on NVIDIA hosts: onnxruntime-gpu (CUDA + TensorRT EPs)
 
 # Testing
 pytest>=7.4
