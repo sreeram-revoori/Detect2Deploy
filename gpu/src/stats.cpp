@@ -1,11 +1,11 @@
-#include "nurosim/stats.h"
+#include "detect2deploy/stats.h"
 
 #include <algorithm>
 #include <cmath>
 #include <numeric>
 #include <sstream>
 
-namespace nurosim {
+namespace detect2deploy {
 
 double percentile(std::vector<double> v, double q) {
   if (v.empty()) return 0.0;
@@ -40,4 +40,4 @@ std::string to_json(const Summary& s) {
   return o.str();
 }
 
-}  // namespace nurosim
+}  // namespace detect2deploy

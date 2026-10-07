@@ -5,11 +5,11 @@
 #include <vector>
 
 #include "check.h"
-#include "nurosim/cuda_utils.h"
-#include "nurosim/letterbox.h"
-#include "nurosim/preprocess_gpu.h"
+#include "detect2deploy/cuda_utils.h"
+#include "detect2deploy/letterbox.h"
+#include "detect2deploy/preprocess_gpu.h"
 
-using namespace nurosim;
+using namespace detect2deploy;
 
 static void compare(int w, int h, double max_tol, double min_exact_frac) {
   std::mt19937 rng(42);

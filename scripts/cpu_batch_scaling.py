@@ -4,7 +4,7 @@ cpu_batch_scaling.py
 Inference-only latency vs batch size on the ONNX Runtime CPU EP, with and
 without MLAS's KleidiAI kernels (Arm SME/SME2, e.g. Apple M4).
 
-    python scripts/cpu_batch_scaling.py models/nurosim_det_fp32.onnx models/nurosim_det_int8.onnx
+    python scripts/cpu_batch_scaling.py models/d2d_det_fp32.onnx models/d2d_det_int8.onnx
 """
 
 import sys
@@ -40,4 +40,4 @@ def main(paths):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or ["models/nurosim_det_fp32.onnx", "models/nurosim_det_int8.onnx"])
+    main(sys.argv[1:] or ["models/d2d_det_fp32.onnx", "models/d2d_det_int8.onnx"])

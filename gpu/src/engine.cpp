@@ -1,4 +1,4 @@
-#include "nurosim/engine.h"
+#include "detect2deploy/engine.h"
 
 #include <NvInferPlugin.h>
 #include <NvOnnxParser.h>
@@ -10,9 +10,9 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "nurosim/cuda_utils.h"
+#include "detect2deploy/cuda_utils.h"
 
-namespace nurosim {
+namespace detect2deploy {
 
 using namespace nvinfer1;
 
@@ -281,4 +281,4 @@ std::string TrtEngine::describe() const {
   return o.str();
 }
 
-}  // namespace nurosim
+}  // namespace detect2deploy

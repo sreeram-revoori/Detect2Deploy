@@ -1,6 +1,6 @@
 # Run environment for the Tier-2 GPU work on x86 + NVIDIA GPU.
-#   docker build -f gpu/Dockerfile -t nurosim-gpu .
-#   docker run --rm --gpus all -v "$PWD/reports:/workspace/nurosim/reports" nurosim-gpu
+#   docker build -f gpu/Dockerfile -t d2d-gpu .
+#   docker run --rm --gpus all -v "$PWD/reports:/workspace/detect2deploy/reports" d2d-gpu
 #
 # The TensorRT NGC image brings CUDA, cuDNN, TensorRT, trtexec and the
 # headers/libs the C++ tools link against. 25.01 = TensorRT 10.8 / CUDA 12.8;
@@ -12,7 +12,7 @@ FROM ${TRT_IMAGE}
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 RUN pip install --no-cache-dir "cmake>=3.24" ninja
 
-WORKDIR /workspace/nurosim
+WORKDIR /workspace/detect2deploy
 COPY requirements-gpu.txt .
 RUN pip install --no-cache-dir -r requirements-gpu.txt
 

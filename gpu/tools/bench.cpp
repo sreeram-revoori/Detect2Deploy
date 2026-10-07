@@ -1,20 +1,20 @@
-// nurosim_bench: end-to-end latency of one detector pipeline, or a detection
+// d2d_bench: end-to-end latency of one detector pipeline, or a detection
 // dump for accuracy parity.
 //
-//   nurosim_bench --engine m.engine --frames bench.nsfr [--pre gpu|cpu] [--cuda-graph]
+//   d2d_bench --engine m.engine --frames bench.nsfr [--pre gpu|cpu] [--cuda-graph]
 //                 [--batch 1] [--warmup 50] [--iters 500] [--json out.json] [--label name]
-//   nurosim_bench --engine m.engine --frames eval.nsfr --dump-dets dets.json [--conf 0.01]
+//   d2d_bench --engine m.engine --frames eval.nsfr --dump-dets dets.json [--conf 0.01]
 #include <cstdio>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "nurosim/cli.h"
-#include "nurosim/pipeline.h"
-#include "nurosim/stats.h"
+#include "detect2deploy/cli.h"
+#include "detect2deploy/pipeline.h"
+#include "detect2deploy/stats.h"
 
-using namespace nurosim;
+using namespace detect2deploy;
 
 static int dump_detections(Pipeline& p, const FrameSet& frames, const std::string& path,
                            const std::string& engine) {

@@ -1,18 +1,18 @@
 """
 tests/test_pipeline.py
-Unit + integration tests for NuroSim-Lite.
+Unit + integration tests for Detect2Deploy.
 Run with:  pytest tests/ -v
 """
 
 import numpy as np
 import pytest
 
-from nurosim.scenario_generator import (
+from detect2deploy.scenario_generator import (
     generate_scenario, generate_batch,
     BBox, FRAME_W, FRAME_H, CLASS_CONFIG, WEATHER_CONDITIONS,
 )
-from nurosim.perception_model import MockDetector, TimedDetector
-from nurosim.metrics import compute_iou, Evaluator
+from detect2deploy.perception_model import MockDetector, TimedDetector
+from detect2deploy.metrics import compute_iou, Evaluator
 
 
 # ── Scenario Generator ────────────────────────────────────────────────────────
@@ -185,7 +185,7 @@ class TestEvaluator:
 class TestIntegration:
 
     def test_parallel_evaluator_multiprocessing(self):
-        from nurosim.ray_worker import ParallelEvaluator
+        from detect2deploy.ray_worker import ParallelEvaluator
         pe = ParallelEvaluator(n_scenarios=20, n_workers=2,
                                use_ray=False, base_seed=0)
         result, stats = pe.run()
@@ -194,7 +194,7 @@ class TestIntegration:
         assert stats["throughput_fps"] > 0
 
     def test_stats_keys_present(self):
-        from nurosim.ray_worker import ParallelEvaluator
+        from detect2deploy.ray_worker import ParallelEvaluator
         pe = ParallelEvaluator(n_scenarios=10, n_workers=2,
                                use_ray=False, base_seed=1)
         _, stats = pe.run()

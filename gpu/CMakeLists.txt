@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.18)
-project(nurosim_gpu LANGUAGES CXX)
+project(d2d_gpu LANGUAGES CXX)
 
-# NUROSIM_HOST_ONLY: build only the CUDA-free library + tests (decode, NMS,
+# D2D_HOST_ONLY: build only the CUDA-free library + tests (decode, NMS,
 #   letterbox reference, stats, frame I/O). Runs anywhere, incl. macOS.
-# NUROSIM_COMPILE_ONLY: compile the CUDA / TensorRT sources without linking.
+# D2D_COMPILE_ONLY: compile the CUDA / TensorRT sources without linking.
 #   CI uses this with nvcc + the TensorRT *header* packages only, so API
 #   mistakes are caught without a GPU or the multi-GB TensorRT libraries.
-option(NUROSIM_HOST_ONLY "Build only the CUDA-free host library and tests" OFF)
-option(NUROSIM_COMPILE_ONLY "Compile GPU sources without linking (CI)" OFF)
+option(D2D_HOST_ONLY "Build only the CUDA-free host library and tests" OFF)
+option(D2D_COMPILE_ONLY "Compile GPU sources without linking (CI)" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,16 +20,16 @@ endif()
 
 enable_testing()
 
-add_library(nurosim_host STATIC
+add_library(d2d_host STATIC
   src/letterbox.cpp src/postprocess.cpp src/stats.cpp src/frames.cpp)
-target_include_directories(nurosim_host PUBLIC include)
+target_include_directories(d2d_host PUBLIC include)
 
 add_executable(test_host tests/test_host.cpp)
-target_link_libraries(test_host PRIVATE nurosim_host)
+target_link_libraries(test_host PRIVATE d2d_host)
 add_test(NAME host COMMAND test_host WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(host PROPERTIES LABELS host)
 
-if(NUROSIM_HOST_ONLY)
+if(D2D_HOST_ONLY)
   return()
 endif()
 
@@ -56,11 +56,11 @@ message(STATUS "TensorRT headers: ${TENSORRT_INCLUDE_DIR}")
 set(GPU_SOURCES src/engine.cpp src/pipeline.cpp src/preprocess.cu)
 set(TOOLS build_engine bench multistream)
 
-if(NUROSIM_COMPILE_ONLY)
-  add_library(nurosim_gpu_objects OBJECT ${GPU_SOURCES}
+if(D2D_COMPILE_ONLY)
+  add_library(d2d_gpu_objects OBJECT ${GPU_SOURCES}
     tools/build_engine.cpp tools/bench.cpp tools/multistream.cpp tests/test_preprocess_gpu.cu)
-  target_include_directories(nurosim_gpu_objects PRIVATE include tests ${TENSORRT_INCLUDE_DIR})
-  target_link_libraries(nurosim_gpu_objects PRIVATE CUDA::cudart)
+  target_include_directories(d2d_gpu_objects PRIVATE include tests ${TENSORRT_INCLUDE_DIR})
+  target_link_libraries(d2d_gpu_objects PRIVATE CUDA::cudart)
   return()
 endif()
 
@@ -72,23 +72,23 @@ foreach(lib nvinfer nvonnxparser nvinfer_plugin)
   endif()
 endforeach()
 
-add_library(nurosim_gpu STATIC ${GPU_SOURCES})
-target_include_directories(nurosim_gpu PUBLIC include ${TENSORRT_INCLUDE_DIR})
-target_link_libraries(nurosim_gpu PUBLIC nurosim_host CUDA::cudart
+add_library(d2d_gpu STATIC ${GPU_SOURCES})
+target_include_directories(d2d_gpu PUBLIC include ${TENSORRT_INCLUDE_DIR})
+target_link_libraries(d2d_gpu PUBLIC d2d_host CUDA::cudart
   ${nvinfer_LIB} ${nvonnxparser_LIB} ${nvinfer_plugin_LIB})
 if(TARGET CUDA::nvtx3)
-  target_link_libraries(nurosim_gpu PUBLIC CUDA::nvtx3)
+  target_link_libraries(d2d_gpu PUBLIC CUDA::nvtx3)
 endif()
 
 foreach(tool ${TOOLS})
-  add_executable(nurosim_${tool} tools/${tool}.cpp)
-  target_link_libraries(nurosim_${tool} PRIVATE nurosim_gpu)
+  add_executable(d2d_${tool} tools/${tool}.cpp)
+  target_link_libraries(d2d_${tool} PRIVATE d2d_gpu)
 endforeach()
 find_package(Threads REQUIRED)
-target_link_libraries(nurosim_multistream PRIVATE Threads::Threads)
+target_link_libraries(d2d_multistream PRIVATE Threads::Threads)
 
 add_executable(test_preprocess_gpu tests/test_preprocess_gpu.cu)
 target_include_directories(test_preprocess_gpu PRIVATE tests)
-target_link_libraries(test_preprocess_gpu PRIVATE nurosim_gpu)
+target_link_libraries(test_preprocess_gpu PRIVATE d2d_gpu)
 add_test(NAME gpu_preprocess COMMAND test_preprocess_gpu)
 set_tests_properties(gpu_preprocess PROPERTIES LABELS gpu)

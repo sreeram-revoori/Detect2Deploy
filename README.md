@@ -1,4 +1,6 @@
-# NuroSim-Lite 🚗
+# Detect2Deploy 🚗
+
+*(formerly NuroSim-Lite)*
 
 > **AV perception model deployment & inference validation** — train a detector on
 > synthetic driving scenes, convert it to FP16 / INT8 for several execution
@@ -15,7 +17,7 @@
 ## The pipeline
 
 ```
- synthetic BEV scenarios          python -m nurosim.deploy …
+ synthetic BEV scenarios          python -m detect2deploy.deploy …
  (4 weathers, 4 classes)
           │
           ▼
@@ -143,7 +145,7 @@ emits duplicate `Cast` nodes (invalid graph); `quantize.py` dedupes them.
 
 ## The release gate
 
-`python -m nurosim.deploy gate --profile <p>` exits non-zero unless, for every target:
+`python -m detect2deploy.deploy gate --profile <p>` exits non-zero unless, for every target:
 
 | check | meaning |
 |---|---|
@@ -169,7 +171,7 @@ make cpp-test                                       # C++ host library + tests (
 
 make deploy PROFILE=m4                              # quantize → parity → bench → gate
 make ci-gate                                        # what CI runs
-python main.py --model models/nurosim_det_int8.onnx # original eval pipeline, real model
+python main.py --model models/d2d_det_int8.onnx # original eval pipeline, real model
 python scripts/cpu_batch_scaling.py                 # finding #4
 
 # retrain from scratch (needs torch + ultralytics)
@@ -272,7 +274,7 @@ Writing a real inference path exposed problems in the first version of this repo
   fast tests; every latency number above is a real network.
 * **`ONNXDetector`** had no NMS, left boxes in 640×640 model space instead of mapping them
   back through the resize, and mapped COCO classes with `cls_id % 4`. It now wraps
-  `nurosim.inference` (letterbox → ORT → vectorised decode + class-aware NMS).
+  `detect2deploy.inference` (letterbox → ORT → vectorised decode + class-aware NMS).
 * **Rain frames weren't deterministic** — rain noise used the unseeded global
   `np.random`. Parity checks need bit-identical inputs.
 * **Degenerate ground truth** — at 6.4 px/m, cones rendered 0–3 px wide and some GT
@@ -287,8 +289,8 @@ Writing a real inference path exposed problems in the first version of this repo
 ## Project structure
 
 ```
-NuroSim-Lite/
-├── nurosim/
+Detect2Deploy/
+├── detect2deploy/
 │   ├── scenario_generator.py   # BEV frame synthesis + GT boxes
 │   ├── perception_model.py     # MockDetector, ONNXDetector, TimedDetector, build_detector
 │   ├── metrics.py              # IoU, mAP@0.5, mAP@0.5:0.95, per-class / per-weather
@@ -299,7 +301,7 @@ NuroSim-Lite/
 │   │   ├── postprocess.py      #   vectorised YOLOv8 decode + class-aware NMS
 │   │   ├── runtime.py          #   ORT session, EP selection, fallback detection
 │   │   └── detector.py         #   InferenceDetector with per-stage timing
-│   └── deploy/                 # python -m nurosim.deploy …
+│   └── deploy/                 # python -m detect2deploy.deploy …
 │       ├── dataset.py, train.py, export.py
 │       ├── quantize.py         #   FP16 / INT8 (QDQ), calibration reader
 │       ├── parity.py           #   task-, detection- and tensor-level parity
@@ -310,7 +312,7 @@ NuroSim-Lite/
 ├── models/                     # FP32 reference + model card
 ├── reports/                    # parity / benchmark / gate reports (M4); gpu/tesla-t4/ (T4 run)
 ├── gpu/                        # Tier 2: C++ TensorRT pipeline, CUDA kernel, tools, tests
-├── nurosim/platform/           # Tier 3: serving, load generator, Ray batch job, registry, shadow
+├── detect2deploy/platform/           # Tier 3: serving, load generator, Ray batch job, registry, shadow
 ├── infra/                      # Tier 3 docs + VM deployment (Triton, Prometheus, Grafana)
 ├── scripts/
 │   ├── cpu_batch_scaling.py
@@ -322,7 +324,7 @@ NuroSim-Lite/
 ```
 
 Seeds are split so nothing leaks: train 0+, val 50,000+, held-out eval 100,000+,
-INT8 calibration 200,000+, benchmark 300,000+ ([`seeds.py`](nurosim/deploy/seeds.py)).
+INT8 calibration 200,000+, benchmark 300,000+ ([`seeds.py`](detect2deploy/deploy/seeds.py)).
 
 ---
 

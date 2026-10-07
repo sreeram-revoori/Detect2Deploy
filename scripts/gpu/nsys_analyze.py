@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-nsys_analyze.py — summarise an Nsight Systems SQLite export of nurosim_bench.
+nsys_analyze.py — summarise an Nsight Systems SQLite export of d2d_bench.
 
     nsys export --type sqlite -o run.sqlite run.nsys-rep
     python scripts/gpu/nsys_analyze.py run.sqlite

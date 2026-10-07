@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: detect2deploy
+    folder: Detect2Deploy
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

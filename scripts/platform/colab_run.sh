@@ -16,7 +16,7 @@ set -uo pipefail
 cd "$(dirname "$0")/../.."
 export PATH=/usr/local/cuda/bin:$PATH MLFLOW_DISABLE_AGENT_HINT=1
 # Shared token for Triton's protected endpoints (statistics etc.; PyTriton >= 0.7)
-export NUROSIM_TRITON_TOKEN=${NUROSIM_TRITON_TOKEN:-$(python3 -c "import secrets; print(secrets.token_hex(16))")}
+export D2D_TRITON_TOKEN=${D2D_TRITON_TOKEN:-$(python3 -c "import secrets; print(secrets.token_hex(16))")}
 
 PY=${PYTHON:-python3}
 QUICK=${QUICK:-0}
@@ -57,25 +57,25 @@ fi
 log "▶ serving environment (Python 3.12, numpy < 2, onnxruntime-gpu)"
 SERVE_PY=$(bash scripts/platform/make_serve_env.sh --gpu 2>> "$OUT/run.log" | tail -1)
 if [ -x "${SERVE_PY:-}" ]; then
-  export NUROSIM_SERVE_PYTHON=$SERVE_PY; log "✓ serving environment: $SERVE_PY"
+  export D2D_SERVE_PYTHON=$SERVE_PY; log "✓ serving environment: $SERVE_PY"
 else
   log "✗ serving environment"; FAILED+=("serving environment")
 fi
 
 # ── 1. models + serving graphs ───────────────────────────────────────────────
-step "quantize (FP16 / INT8 variants)" $PY -m nurosim.deploy quantize
-step "export serving graphs" $PY -m nurosim.platform export
+step "quantize (FP16 / INT8 variants)" $PY -m detect2deploy.deploy quantize
+step "export serving graphs" $PY -m detect2deploy.platform export
 
 # ── 2. serving: dynamic batching sweep ───────────────────────────────────────
-step "serving sweep (PyTriton, $PROVIDER)" $PY -m nurosim.platform serving-bench \
+step "serving sweep (PyTriton, $PROVIDER)" $PY -m detect2deploy.platform serving-bench \
      --model build/platform/serve_fp16_mixed.onnx --provider "$PROVIDER" --backend pytriton \
      --duration "$DURATION" --out "$OUT"
 
 # ── 3. offboard batch inference ──────────────────────────────────────────────
-step "corpus ($CORPUS_N frames)" $PY -m nurosim.platform corpus --n "$CORPUS_N" --out data/corpus \
+step "corpus ($CORPUS_N frames)" $PY -m detect2deploy.platform corpus --n "$CORPUS_N" --out data/corpus \
      --info "$OUT/corpus.json"
 for bs in 8 32; do
-  step "batch job (Ray Data, batch $bs)" $PY -m nurosim.platform batch --corpus data/corpus \
+  step "batch job (Ray Data, batch $bs)" $PY -m detect2deploy.platform batch --corpus data/corpus \
        --model build/platform/serve_fp16_mixed.onnx --provider "$PROVIDER" --batch-size "$bs" \
        --actors 1 --labeler-cpus 1 --usd-per-hour "$USD_PER_HOUR" --out "$OUT" --tag "bs$bs"
 done
@@ -84,15 +84,15 @@ done
 # Evidence = the Tier-2 T4 run's parity/benchmark reports, re-gated here.
 mkdir -p "$OUT/evidence"
 cp reports/gpu/tesla-t4/parity_nvidia-trt.json reports/gpu/tesla-t4/benchmark_nvidia-trt.json "$OUT/evidence/"
-$PY -m nurosim.deploy --reports "$OUT/evidence" gate --profile nvidia-trt \
+$PY -m detect2deploy.deploy --reports "$OUT/evidence" gate --profile nvidia-trt \
     --targets fp32-cuda,fp16-trt,int8-trt,int8_tail32-trt,fp16_mixed-trt >> "$OUT/run.log" 2>&1 || true
 rm -rf build/platform/mlruns
-reg() { $PY -m nurosim.platform registry "$@" --uri "$URI"; }
-if step "register fp16_mixed (evidence: fp16_mixed-trt)" reg register --model models/nurosim_det_fp16_mixed.onnx \
+reg() { $PY -m detect2deploy.platform registry "$@" --uri "$URI"; }
+if step "register fp16_mixed (evidence: fp16_mixed-trt)" reg register --model models/d2d_det_fp16_mixed.onnx \
      --target fp16_mixed-trt --gate "$OUT/evidence/gate_nvidia-trt.json" --parity "$OUT/evidence/parity_nvidia-trt.json"; then
   step "promote v1 → production" reg promote --version 1 && EVENTS+=("v1 (fp16_mixed) promoted to production")
 fi
-if step "register int8_trt (evidence: int8-trt)" reg register --model models/nurosim_det_int8_trt.onnx \
+if step "register int8_trt (evidence: int8-trt)" reg register --model models/d2d_det_int8_trt.onnx \
      --target int8-trt --gate "$OUT/evidence/gate_nvidia-trt.json" --parity "$OUT/evidence/parity_nvidia-trt.json"; then
   # Expected to be refused: the gate failed int8-trt on cone AP (or the file differs from the evidence)
   if reg promote --version 2 >> "$OUT/run.log" 2>&1; then
@@ -106,14 +106,14 @@ step "registry table" reg list --json "$OUT/registry.json" "${EV_ARGS[@]}"
 
 # ── 5. shadow: candidate vs whatever 'production' resolves to ────────────────
 # The serving env has no MLflow: resolve 'production' here and hand the server a file
-step "export registry:production" $PY -m nurosim.platform export --from-registry production --uri "$URI"
+step "export registry:production" $PY -m detect2deploy.platform export --from-registry production --uri "$URI"
 log "▶ shadow (production=registry:production vs candidate=int8_trt)"
-"${NUROSIM_SERVE_PYTHON:-$PY}" -m nurosim.platform serve --provider "$PROVIDER" --max-batch 8 --queue-delay-us 0 \
+"${D2D_SERVE_PYTHON:-$PY}" -m detect2deploy.platform serve --provider "$PROVIDER" --max-batch 8 --queue-delay-us 0 \
     --model production=build/platform/serve_registry_production.onnx \
     --model candidate=build/platform/serve_int8_trt.onnx >> "$OUT/server_shadow.log" 2>&1 &
 SERVER=$!
-if $PY -c "from nurosim.platform.loadgen import wait_ready; import sys; sys.exit(0 if wait_ready('candidate') and wait_ready('production') else 1)"; then
-  step "shadow comparison ($SHADOW_N frames)" $PY -m nurosim.platform shadow --production production \
+if $PY -c "from detect2deploy.platform.loadgen import wait_ready; import sys; sys.exit(0 if wait_ready('candidate') and wait_ready('production') else 1)"; then
+  step "shadow comparison ($SHADOW_N frames)" $PY -m detect2deploy.platform shadow --production production \
        --candidate candidate --frames "$SHADOW_N" --out "$OUT"
 else
   log "✗ shadow server not ready (see server_shadow.log)"; FAILED+=("shadow server")
@@ -121,7 +121,7 @@ fi
 kill -INT $SERVER 2>/dev/null; wait $SERVER 2>/dev/null
 
 # ── 6. summary ───────────────────────────────────────────────────────────────
-step "summary" $PY -m nurosim.platform report --dir "$OUT" > /dev/null
+step "summary" $PY -m detect2deploy.platform report --dir "$OUT" > /dev/null
 log "Summary: $OUT/SUMMARY.md"
 if [ ${#FAILED[@]} -gt 0 ]; then log "${#FAILED[@]} step(s) failed: ${FAILED[*]}"; exit 1; fi
 log "All steps passed."

@@ -3,7 +3,7 @@
 # them through an SSH tunnel (see infra/README.md), don't open firewall rules.
 services:
   triton:
-    image: ${TRITON_IMAGE:-nvcr.io/nvidia/tritonserver:25.01-py3}   # TensorRT 10.8 = same as nurosim-gpu
+    image: ${TRITON_IMAGE:-nvcr.io/nvidia/tritonserver:25.01-py3}   # TensorRT 10.8 = same as d2d-gpu
     command: ["tritonserver", "--model-repository=/models", "--model-control-mode=explicit",
               "--load-model=*", "--metrics-config=summary_latencies=true"]
     ports: ["127.0.0.1:8000:8000", "127.0.0.1:8001:8001", "127.0.0.1:8002:8002"]
@@ -25,7 +25,7 @@ services:
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/nurosim-serving.json
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/d2d-serving.json
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro

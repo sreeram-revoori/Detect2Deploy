@@ -31,7 +31,7 @@ SKIP_PIP=1 bash scripts/gpu/run_all.sh
 **Google Colab (T4 GPU runtime)** — no Docker there; TensorRT comes from NVIDIA's apt repo:
 
 ```bash
-!git clone -q -b tier2-gpu https://github.com/sreeram-revoori/NuroSim-Lite.git
+!git clone -q https://github.com/sreeram-revoori/NuroSim-Lite.git
 %cd NuroSim-Lite
 !bash scripts/gpu/colab_setup.sh
 !QUICK=1 SKIP_PIP=1 bash scripts/gpu/run_all.sh
@@ -63,13 +63,13 @@ continues, so one problem doesn't cost the rest of the session.
 | `src/engine.cpp` | ONNX → engine (FP16 / INT8-QDQ / DLA, optimisation profiles, timing cache, `--fp32-layers` precision pinning, strongly typed builds) and a runtime wrapper (named I/O tensors, `enqueueV3`, pinned mirrors). TensorRT 8.6 (JetPack 6) through 11.x. |
 | `src/preprocess.cu` | Fused letterbox kernel: bilinear resize + pad + BGR→RGB + HWC→CHW + scale in one pass. The H2D copy becomes uint8 HWC (1.2 MB) instead of float32 CHW (4.9 MB). |
 | `src/pipeline.cpp` | One detector on one stream: pinned staging → H2D → preprocess → TensorRT → D2H → post; optional CUDA-graph capture of the whole GPU side; CUDA-event + NVTX instrumentation. |
-| `src/postprocess.cpp`, `src/letterbox.cpp` | CPU decode/NMS and letterbox reference — identical semantics to `nurosim/inference/`, so C++ and Python outputs compare box for box. |
-| `tools/build_engine.cpp` | `nurosim_build_engine` |
-| `tools/bench.cpp` | `nurosim_bench` — latency (JSON) or `--dump-dets` for parity |
-| `tools/multistream.cpp` | `nurosim_multistream` — experiment 5 |
+| `src/postprocess.cpp`, `src/letterbox.cpp` | CPU decode/NMS and letterbox reference — identical semantics to `detect2deploy/inference/`, so C++ and Python outputs compare box for box. |
+| `tools/build_engine.cpp` | `d2d_build_engine` |
+| `tools/bench.cpp` | `d2d_bench` — latency (JSON) or `--dump-dets` for parity |
+| `tools/multistream.cpp` | `d2d_multistream` — experiment 5 |
 | `tests/` | host tests (run everywhere) and a GPU kernel-vs-reference test (ctest label `gpu`) |
-| `../nurosim/deploy/trt_prep.py` | frame sets (`.nsfr`) + EfficientNMS graph surgery |
-| `../nurosim/deploy/cpp_parity.py`, `gpu_report.py` | scoring of C++ detections; `SUMMARY.md` |
+| `../detect2deploy/deploy/trt_prep.py` | frame sets (`.nsfr`) + EfficientNMS graph surgery |
+| `../detect2deploy/deploy/cpp_parity.py`, `gpu_report.py` | scoring of C++ detections; `SUMMARY.md` |
 | `../scripts/gpu/run_all.sh` | the orchestration above |
 
 ## Design notes

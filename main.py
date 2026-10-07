@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 main.py
-NuroSim-Lite  ·  End-to-end AV simulation & perception evaluation pipeline.
+Detect2Deploy  ·  End-to-end AV simulation & perception evaluation pipeline.
 
 Quick start:
     python main.py                          # 500 scenarios, 4 workers
     python main.py --n 100 --workers 2      # fast smoke test
     python main.py --n 1000 --workers 8 --mlflow  # full run with MLflow
-    python main.py --model models/nurosim_det_int8.onnx   # real detector (ONNX)
+    python main.py --model models/d2d_det_int8.onnx   # real detector (ONNX)
 """
 
 import argparse
@@ -19,12 +19,12 @@ import time
 import cv2
 import numpy as np
 
-from nurosim.scenario_generator import generate_scenario, WEATHER_CONDITIONS
-from nurosim.perception_model   import TimedDetector, build_detector
-from nurosim.metrics            import Evaluator
-from nurosim.ray_worker         import ParallelEvaluator
-from nurosim.deploy.seeds       import EVAL_SEED
-from nurosim.tracker            import (
+from detect2deploy.scenario_generator import generate_scenario, WEATHER_CONDITIONS
+from detect2deploy.perception_model   import TimedDetector, build_detector
+from detect2deploy.metrics            import Evaluator
+from detect2deploy.ray_worker         import ParallelEvaluator
+from detect2deploy.deploy.seeds       import EVAL_SEED
+from detect2deploy.tracker            import (
     annotate_frame, log_to_mlflow,
     plot_per_class_ap, plot_weather_map, plot_latency_histogram,
 )
@@ -34,13 +34,13 @@ logging.basicConfig(
     format="%(asctime)s  %(levelname)-7s  %(name)s  %(message)s",
     datefmt="%H:%M:%S",
 )
-logger = logging.getLogger("nurosim.main")
+logger = logging.getLogger("detect2deploy.main")
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def parse_args():
-    p = argparse.ArgumentParser(description="NuroSim-Lite evaluation pipeline")
+    p = argparse.ArgumentParser(description="Detect2Deploy evaluation pipeline")
     p.add_argument("--n",        type=int,   default=500,   help="Number of scenarios")
     p.add_argument("--workers",  type=int,   default=4,     help="Parallel workers")
     p.add_argument("--seed",     type=int,   default=EVAL_SEED,
@@ -92,7 +92,7 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     logger.info("=" * 56)
-    logger.info("  NuroSim-Lite  ·  AV Perception Evaluation")
+    logger.info("  Detect2Deploy  ·  AV Perception Evaluation")
     logger.info("  Scenarios : %d  |  Workers : %d  |  IoU : %.2f",
                 args.n, args.workers, args.iou)
     logger.info("=" * 56)
@@ -132,7 +132,7 @@ def main():
 
     # ── Step 5: save sample annotated frames ──
     if args.save_frames:
-        from nurosim.scenario_generator import generate_scenario as gs
+        from detect2deploy.scenario_generator import generate_scenario as gs
         det = TimedDetector(build_detector(spec, seed=0))
         samples = []
         for sid in range(min(12, args.n)):
@@ -158,7 +158,7 @@ def main():
             stats=stats,
             sample_frames=sample_pairs if sample_pairs else None,
             latencies=None,
-            run_name=f"nurosim-n{args.n}-w{args.workers}",
+            run_name=f"d2d-n{args.n}-w{args.workers}",
         )
         if run_id:
             logger.info("MLflow run ID: %s", run_id)

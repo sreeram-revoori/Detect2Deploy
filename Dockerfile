@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 LABEL maintainer="Sreeram Revoori <rsreddy2104@gmail.com>"
-LABEL description="NuroSim-Lite — AV Simulation & ML Evaluation Framework"
+LABEL description="Detect2Deploy — AV Simulation & ML Evaluation Framework"
 
 # ── System deps ───────────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \

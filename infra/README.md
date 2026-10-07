@@ -6,17 +6,17 @@ model version is allowed into production.
 
 | piece | what it does | code |
 |---|---|---|
-| **Raw-frame serving graph** | Preprocessing folded into the ONNX graph: clients send uint8 camera frames (1.2 MB, 4x less than float32) and there is no preprocessing service to keep in sync. Bit-identical to the Tier-1 path. | `nurosim/platform/graph.py` |
+| **Raw-frame serving graph** | Preprocessing folded into the ONNX graph: clients send uint8 camera frames (1.2 MB, 4x less than float32) and there is no preprocessing service to keep in sync. Bit-identical to the Tier-1 path. | `detect2deploy/platform/graph.py` |
 | **Serving with dynamic batching** | Triton Inference Server — via PyTriton (no Docker, works on Colab) or the Triton container serving TensorRT plans. A closed-loop gRPC load generator sweeps batching configs × concurrency and records client latency plus Triton's own queue / compute split and the batch sizes actually formed. | `server.py`, `loadgen.py`, `serving.py` |
 | **Offboard batch inference** | Ray Data: JPEG corpus in Parquet shards → CPU decode tasks → GPU actor pool (model loaded once) → labels in Parquet. Reports frames/s, sampled GPU utilisation (is the GPU busy or starved by decode?), Ray per-operator stats, $ per million frames, and label mAP vs ground truth. | `corpus.py`, `batch.py` |
-| **Gated model registry** | MLflow registry. `promote` refuses any version whose Tier-1 gate didn't pass **for that exact file**: the gate JSON records the hash of the model it measured, and the registry compares it with the artefact. Servers load `registry:production`. | `registry.py`, `nurosim/deploy/gate.py` |
+| **Gated model registry** | MLflow registry. `promote` refuses any version whose Tier-1 gate didn't pass **for that exact file**: the gate JSON records the hash of the model it measured, and the registry compares it with the artefact. Servers load `registry:production`. | `registry.py`, `detect2deploy/deploy/gate.py` |
 | **Shadow comparison** | Mirror the same frames to production and a candidate; promote only if the candidate reproduces ≥ 99 % of production's detections and its p99 is ≤ 1.25x. | `shadow.py` |
 | **Monitoring (VM)** | Prometheus scraping Triton; a provisioned Grafana dashboard: request rate, avg / p99 latency, queue vs compute time, batch size formed, GPU utilisation / power / memory. | `infra/vm/` |
 
 ## Google Colab (T4 GPU runtime)
 
 ```python
-!git clone -q -b tier3-platform https://github.com/sreeram-revoori/NuroSim-Lite.git
+!git clone -q https://github.com/sreeram-revoori/NuroSim-Lite.git
 %cd /content/NuroSim-Lite
 !bash scripts/gpu/colab_setup.sh            # TensorRT + onnxruntime-gpu (same as Tier 2)
 !bash scripts/platform/colab_run.sh         # ~25 min; QUICK=1 for ~8 min
@@ -34,7 +34,7 @@ Any Linux VM with an NVIDIA GPU, a recent driver, Docker and the NVIDIA Containe
 (e.g. GCP `g2-standard-8` with an L4, or a GCP/AWS deep-learning image, which ship all three).
 
 ```bash
-git clone -b tier3-platform https://github.com/sreeram-revoori/NuroSim-Lite.git && cd NuroSim-Lite
+git clone https://github.com/sreeram-revoori/NuroSim-Lite.git && cd NuroSim-Lite
 USD_PER_HOUR=0.85 bash scripts/platform/vm_run.sh      # the VM's hourly price → $ / 1M frames
 ```
 
@@ -63,7 +63,7 @@ same NGC release so the TensorRT versions match (10.8); change both together.
 * Locally (macOS): serving graph bit-exact vs Tier 1; ServingModel detections identical to
   `InferenceDetector`; Ray Data job end to end on CPU; registry gating (pass / fail /
   evidence-for-a-different-file); shadow decisions.
-* CI (Linux, CPU): the same tests plus `python -m nurosim.platform smoke` — a real Triton
+* CI (Linux, CPU): the same tests plus `python -m detect2deploy.platform smoke` — a real Triton
   server via PyTriton serving two models, driven over gRPC (the dynamic batcher formed batches
   of 1–3 from 4 clients), statistics read through the access token, and a shadow comparison.
   Getting there surfaced two serving-environment issues, both fixed: PyTriton needs numpy < 2
