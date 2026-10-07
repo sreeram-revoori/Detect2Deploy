@@ -1,0 +1,10 @@
+.venv
+.git
+data
+runs
+build
+mlruns
+reports/gpu
+models/*.pt
+**/__pycache__
+.pytest_cache

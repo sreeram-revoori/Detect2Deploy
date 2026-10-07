@@ -1,0 +1,10 @@
+# nsys_fp16_nms_graph.sqlite
+
+iterations (NVTX 'gpu' ranges): 351, steady-state analysed: 264
+CUDA graph launches: 351; graph GPU duration p50 1.730 ms, p99 2.358 ms (kernels inside graphs are not traced individually)
+
+CPU launch cost per iteration: 1 kernel launches, 0.098 ms
+cudaGraphLaunch per iteration: 0.261 ms (one call)
+
+
+> Analysed from the SQLite export of the identical profiling step in the quick run (same engine, 300 iterations); the full run's `nsys stats` call failed on that stale export.

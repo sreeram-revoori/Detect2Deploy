@@ -64,11 +64,21 @@ class OrtRuntime:
                  provider: str = "cpu",
                  provider_options: Optional[Dict[str, Any]] = None,
                  static_batch: Optional[int] = None,
-                 intra_op_threads: Optional[int] = None):
+                 intra_op_threads: Optional[int] = None,
+                 graph_opt: str = "all"):
         try:
             import onnxruntime as ort
         except ImportError as e:
             raise ImportError("onnxruntime is required: pip install onnxruntime") from e
+
+        if provider in ("cuda", "tensorrt") and hasattr(ort, "preload_dlls"):
+            # Load the CUDA / cuDNN runtime libs this onnxruntime-gpu build needs
+            # from the nvidia-* pip wheels when present (e.g. a CUDA 12 ORT build
+            # on a CUDA 13 host). No-op when they aren't installed.
+            try:
+                ort.preload_dlls()
+            except Exception:                         # pragma: no cover
+                pass
 
         if provider not in PROVIDERS:
             raise ValueError(f"unknown provider '{provider}', expected one of {list(PROVIDERS)}")
@@ -84,7 +94,14 @@ class OrtRuntime:
             model_bytes = fix_dim_params(model_bytes, {"batch": static_batch})
 
         so = ort.SessionOptions()
-        so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        # "disable" hands the graph to the EP untouched — e.g. so ORT's own
+        # Q/DQ rewrites can't change what TensorRT quantises.
+        so.graph_optimization_level = {
+            "all": ort.GraphOptimizationLevel.ORT_ENABLE_ALL,
+            "extended": ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED,
+            "basic": ort.GraphOptimizationLevel.ORT_ENABLE_BASIC,
+            "disable": ort.GraphOptimizationLevel.ORT_DISABLE_ALL,
+        }[graph_opt]
         if intra_op_threads:
             so.intra_op_num_threads = intra_op_threads
         so.log_severity_level = 3

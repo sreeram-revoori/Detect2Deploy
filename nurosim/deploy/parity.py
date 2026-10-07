@@ -292,7 +292,7 @@ def write_parity(report: Dict[str, Any], out_dir: str = "reports") -> str:
     os.makedirs(out_dir, exist_ok=True)
     stem = os.path.join(out_dir, f"parity_{report['profile']}")
     with open(stem + ".json", "w") as f:
-        json.dump(report, f, indent=2)
+        json.dump(report, f, indent=2, default=lambda o: o.item() if hasattr(o, "item") else str(o))
     with open(stem + ".md", "w") as f:
         f.write(parity_markdown(report))
     plot_parity_deltas(report, stem + "_deltas.png")
