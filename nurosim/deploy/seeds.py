@@ -10,3 +10,4 @@ VAL_SEED   = 50_000       # scenarios 50_000 … (ultralytics val split)
 EVAL_SEED  = 100_000      # held-out parity / accuracy set
 CALIB_SEED = 200_000      # INT8 calibration frames
 BENCH_SEED = 300_000      # latency benchmark frames
+CORPUS_SEED = 400_000     # offboard batch-inference corpus

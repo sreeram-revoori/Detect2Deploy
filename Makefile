@@ -77,6 +77,19 @@ gpu-docker-run:
 	docker run --rm --gpus all -v "$(PWD)/reports:/workspace/nurosim/reports" \
 	           -v "$(PWD)/build:/workspace/nurosim/build" nurosim-gpu
 
+# ── AI platform (Tier 3) ──────────────────────────────────────────────────────
+install-platform:
+	pip install -r requirements-platform.txt
+
+platform-smoke:    ## real Triton (PyTriton) on CPU + load + shadow; Linux only
+	$(PY) -m nurosim.platform smoke
+
+platform-colab:
+	bash scripts/platform/colab_run.sh
+
+platform-vm:
+	bash scripts/platform/vm_run.sh
+
 # ── Docker ─────────────────────────────────────────────────────────────────────
 docker-build:
 	docker build -t nurosim-lite:latest .

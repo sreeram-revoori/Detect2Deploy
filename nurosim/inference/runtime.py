@@ -118,7 +118,8 @@ class OrtRuntime:
         inp = self.session.get_inputs()[0]
         self.input_name   = inp.name
         self.input_shape  = inp.shape
-        self.input_dtype  = np.float16 if inp.type == "tensor(float16)" else np.float32
+        self.input_dtype  = {"tensor(float16)": np.float16,
+                             "tensor(uint8)": np.uint8}.get(inp.type, np.float32)
         self.output_name  = self.session.get_outputs()[0].name
         self.provider     = provider
         self.model_path   = model_path

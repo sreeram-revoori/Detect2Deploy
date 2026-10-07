@@ -1,0 +1,33 @@
+# Tier 3 on a cloud GPU VM: Triton Inference Server + Prometheus + Grafana.
+# Started by scripts/platform/vm_run.sh. Ports bind to localhost only — reach
+# them through an SSH tunnel (see infra/README.md), don't open firewall rules.
+services:
+  triton:
+    image: ${TRITON_IMAGE:-nvcr.io/nvidia/tritonserver:25.01-py3}   # TensorRT 10.8 = same as nurosim-gpu
+    command: ["tritonserver", "--model-repository=/models", "--model-control-mode=explicit",
+              "--load-model=*", "--metrics-config=summary_latencies=true"]
+    ports: ["127.0.0.1:8000:8000", "127.0.0.1:8001:8001", "127.0.0.1:8002:8002"]
+    volumes: ["./model_repository:/models:ro"]
+    shm_size: 1g
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: all, capabilities: [gpu]}]
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    volumes: ["./prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["127.0.0.1:9090:9090"]
+    depends_on: [triton]
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/nurosim-serving.json
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [prometheus]

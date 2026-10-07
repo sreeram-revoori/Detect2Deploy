@@ -1,0 +1,9 @@
+# The PyTriton serving process. PyTriton >= 0.5.8 requires numpy < 2 (0.5.7, the
+# last release without the cap, returns empty output tensors under numpy 2), so the
+# server runs in its own Python 3.12 environment: scripts/platform/make_serve_env.sh.
+# onnxruntime / onnxruntime-gpu is added by that script.
+numpy<2
+nvidia-pytriton>=0.6
+opencv-python-headless>=4.8,<4.11
+onnx>=1.16
+pyyaml>=6.0

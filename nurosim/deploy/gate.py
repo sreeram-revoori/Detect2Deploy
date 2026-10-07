@@ -113,3 +113,24 @@ def gate_markdown(profile: Profile, checks: List[Check]) -> str:
 def load_reports(profile_name: str, report_dir: str = "reports"):
     return (_load(os.path.join(report_dir, f"parity_{profile_name}.json")),
             _load(os.path.join(report_dir, f"benchmark_{profile_name}.json")))
+
+
+def write_gate_json(profile: Profile, checks: List[Check], path: str,
+                    parity: Optional[Dict[str, Any]] = None) -> str:
+    """Machine-readable verdict per target. `evidence_sha256` is the hash of the
+    model the parity run actually measured — the model registry only accepts
+    this verdict for a file with that exact hash."""
+    targets: Dict[str, Any] = {}
+    for t in profile.targets:
+        own = [c for c in checks if c.target == t.name]
+        measured = (parity or {}).get("targets", {}).get(t.name, {})
+        targets[t.name] = {
+            "variant": t.variant, "provider": t.provider, "expect_fail": t.expect_fail,
+            "evidence_sha256": measured.get("model_sha256"),
+            "passed": all(c.passed for c in own) and not t.expect_fail,
+            "checks": [{"check": c.check, "value": c.value, "limit": c.limit, "passed": c.passed} for c in own],
+        }
+    with open(path, "w") as f:
+        json.dump({"profile": profile.name, "passed": all(c.passed for c in checks), "targets": targets},
+                  f, indent=2)
+    return path

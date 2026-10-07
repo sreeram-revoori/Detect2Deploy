@@ -241,6 +241,26 @@ bash scripts/gpu/colab_setup.sh && bash scripts/gpu/run_all.sh   # Google Colab 
 bash scripts/gpu/run_all.sh                      # Jetson Orin / bare metal
 ```
 
+### AI platform (Tier 3)
+
+[`infra/`](infra/README.md) wraps the model in the systems around it:
+**Triton serving** with dynamic batching (PyTriton on Colab, the Triton container + TensorRT
+plans on a VM) and a gRPC load generator; **offboard batch inference** with Ray Data
+(JPEG corpus → CPU decode → GPU actors → Parquet labels, with GPU utilisation and $ / 1M
+frames); an **MLflow registry** whose promotion requires the release gate to have passed for
+the exact file being promoted; a **shadow comparison** of candidate vs production; and on a VM,
+**Prometheus + Grafana**. The served model takes raw uint8 frames — preprocessing is folded
+into the graph, bit-identical to Tier 1.
+
+```bash
+bash scripts/platform/colab_run.sh                     # Google Colab (T4)
+USD_PER_HOUR=0.85 bash scripts/platform/vm_run.sh      # cloud GPU VM
+```
+
+> **Not yet run on a GPU.** Tested locally and in CI, including a real Triton server (via
+> PyTriton, CPU) serving two models under gRPC load with a shadow comparison. Results will be
+> added from the Colab run.
+
 ---
 
 ## Fixes to the original v0.1
@@ -290,10 +310,13 @@ NuroSim-Lite/
 ├── models/                     # FP32 reference + model card
 ├── reports/                    # parity / benchmark / gate reports (M4); gpu/tesla-t4/ (T4 run)
 ├── gpu/                        # Tier 2: C++ TensorRT pipeline, CUDA kernel, tools, tests
+├── nurosim/platform/           # Tier 3: serving, load generator, Ray batch job, registry, shadow
+├── infra/                      # Tier 3 docs + VM deployment (Triton, Prometheus, Grafana)
 ├── scripts/
 │   ├── cpu_batch_scaling.py
-│   └── gpu/run_all.sh          # every GPU experiment, one command
-├── tests/                      # 60 Python tests; a tiny generated ONNX model stands in for CI
+│   ├── gpu/run_all.sh          # every GPU experiment, one command
+│   └── platform/               # colab_run.sh, vm_run.sh
+├── tests/                      # 69 Python tests; a tiny generated ONNX model stands in for CI
 ├── main.py                     # original evaluation pipeline (--model for a real detector)
 └── .github/workflows/ci.yml    # tests + deploy gate
 ```

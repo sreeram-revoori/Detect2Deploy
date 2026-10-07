@@ -1,0 +1,285 @@
+{
+  "profile": "m4",
+  "passed": false,
+  "targets": {
+    "fp32-cpu": {
+      "variant": "fp32",
+      "provider": "cpu",
+      "expect_fail": false,
+      "evidence_sha256": "4446d7299936",
+      "passed": true,
+      "checks": [
+        {
+          "check": "provider",
+          "value": "CPUExecutionProvider",
+          "limit": "cpu",
+          "passed": true
+        },
+        {
+          "check": "freshness",
+          "value": "4446d7299936",
+          "limit": "reports match model on disk",
+          "passed": true
+        },
+        {
+          "check": "e2e p99 latency",
+          "value": "21.39 ms",
+          "limit": "\u2264 40 ms",
+          "passed": true
+        }
+      ]
+    },
+    "fp16-cpu": {
+      "variant": "fp16",
+      "provider": "cpu",
+      "expect_fail": false,
+      "evidence_sha256": "e3721133721e",
+      "passed": true,
+      "checks": [
+        {
+          "check": "provider",
+          "value": "CPUExecutionProvider",
+          "limit": "cpu",
+          "passed": true
+        },
+        {
+          "check": "freshness",
+          "value": "e3721133721e",
+          "limit": "reports match model on disk",
+          "passed": true
+        },
+        {
+          "check": "mAP@0.5 drop",
+          "value": "-0.0007",
+          "limit": "\u2264 0.01",
+          "passed": true
+        },
+        {
+          "check": "worst weather drop",
+          "value": "rain +0.0000",
+          "limit": "\u2264 0.02",
+          "passed": true
+        },
+        {
+          "check": "worst class drop",
+          "value": "vehicle +0.0000",
+          "limit": "\u2264 0.03",
+          "passed": true
+        },
+        {
+          "check": "e2e p99 latency",
+          "value": "20.86 ms",
+          "limit": "\u2264 40 ms",
+          "passed": true
+        }
+      ]
+    },
+    "int8-cpu": {
+      "variant": "int8",
+      "provider": "cpu",
+      "expect_fail": false,
+      "evidence_sha256": "6cd5fe89c272",
+      "passed": true,
+      "checks": [
+        {
+          "check": "provider",
+          "value": "CPUExecutionProvider",
+          "limit": "cpu",
+          "passed": true
+        },
+        {
+          "check": "freshness",
+          "value": "6cd5fe89c272",
+          "limit": "reports match model on disk",
+          "passed": true
+        },
+        {
+          "check": "mAP@0.5 drop",
+          "value": "+0.0066",
+          "limit": "\u2264 0.01",
+          "passed": true
+        },
+        {
+          "check": "worst weather drop",
+          "value": "rain +0.0154",
+          "limit": "\u2264 0.02",
+          "passed": true
+        },
+        {
+          "check": "worst class drop",
+          "value": "cone +0.0264",
+          "limit": "\u2264 0.03",
+          "passed": true
+        },
+        {
+          "check": "e2e p99 latency",
+          "value": "16.80 ms",
+          "limit": "\u2264 30 ms",
+          "passed": true
+        }
+      ]
+    },
+    "int8_full-cpu": {
+      "variant": "int8_full",
+      "provider": "cpu",
+      "expect_fail": true,
+      "evidence_sha256": "f8f479e7f728",
+      "passed": false,
+      "checks": [
+        {
+          "check": "provider",
+          "value": "CPUExecutionProvider",
+          "limit": "cpu",
+          "passed": true
+        },
+        {
+          "check": "freshness",
+          "value": "f8f479e7f728",
+          "limit": "reports match model on disk",
+          "passed": true
+        },
+        {
+          "check": "negative control caught",
+          "value": "mAP@0.5 drop +0.9651",
+          "limit": "must exceed accuracy budget",
+          "passed": true
+        }
+      ]
+    },
+    "fp32-coreml": {
+      "variant": "fp32",
+      "provider": "coreml",
+      "expect_fail": false,
+      "evidence_sha256": "4446d7299936",
+      "passed": true,
+      "checks": [
+        {
+          "check": "provider",
+          "value": "CoreMLExecutionProvider",
+          "limit": "coreml",
+          "passed": true
+        },
+        {
+          "check": "freshness",
+          "value": "4446d7299936",
+          "limit": "reports match model on disk",
+          "passed": true
+        },
+        {
+          "check": "mAP@0.5 drop",
+          "value": "+0.0000",
+          "limit": "\u2264 0.01",
+          "passed": true
+        },
+        {
+          "check": "worst weather drop",
+          "value": "clear +0.0000",
+          "limit": "\u2264 0.02",
+          "passed": true
+        },
+        {
+          "check": "worst class drop",
+          "value": "vehicle +0.0000",
+          "limit": "\u2264 0.03",
+          "passed": true
+        },
+        {
+          "check": "e2e p99 latency",
+          "value": "7.07 ms",
+          "limit": "\u2264 20 ms",
+          "passed": true
+        }
+      ]
+    },
+    "fp16-coreml": {
+      "variant": "fp16",
+      "provider": "coreml",
+      "expect_fail": false,
+      "evidence_sha256": "e3721133721e",
+      "passed": false,
+      "checks": [
+        {
+          "check": "provider",
+          "value": "CoreMLExecutionProvider",
+          "limit": "coreml",
+          "passed": true
+        },
+        {
+          "check": "freshness",
+          "value": "e3721133721e",
+          "limit": "reports match model on disk",
+          "passed": true
+        },
+        {
+          "check": "mAP@0.5 drop",
+          "value": "+0.0077",
+          "limit": "\u2264 0.01",
+          "passed": true
+        },
+        {
+          "check": "worst weather drop",
+          "value": "rain +0.0192",
+          "limit": "\u2264 0.02",
+          "passed": true
+        },
+        {
+          "check": "worst class drop",
+          "value": "cone +0.0306",
+          "limit": "\u2264 0.03",
+          "passed": false
+        },
+        {
+          "check": "e2e p99 latency",
+          "value": "3.10 ms",
+          "limit": "\u2264 10 ms",
+          "passed": true
+        }
+      ]
+    },
+    "fp16_mixed-coreml": {
+      "variant": "fp16_mixed",
+      "provider": "coreml",
+      "expect_fail": false,
+      "evidence_sha256": "b45e802ade19",
+      "passed": true,
+      "checks": [
+        {
+          "check": "provider",
+          "value": "CoreMLExecutionProvider",
+          "limit": "coreml",
+          "passed": true
+        },
+        {
+          "check": "freshness",
+          "value": "b45e802ade19",
+          "limit": "reports match model on disk",
+          "passed": true
+        },
+        {
+          "check": "mAP@0.5 drop",
+          "value": "-0.0001",
+          "limit": "\u2264 0.01",
+          "passed": true
+        },
+        {
+          "check": "worst weather drop",
+          "value": "night +0.0000",
+          "limit": "\u2264 0.02",
+          "passed": true
+        },
+        {
+          "check": "worst class drop",
+          "value": "vehicle +0.0000",
+          "limit": "\u2264 0.03",
+          "passed": true
+        },
+        {
+          "check": "e2e p99 latency",
+          "value": "7.08 ms",
+          "limit": "\u2264 10 ms",
+          "passed": true
+        }
+      ]
+    }
+  }
+}
