@@ -15,6 +15,7 @@ set -uo pipefail
 cd "$(dirname "$0")/../.."
 
 PY=${PYTHON:-python3}
+export PATH=/usr/local/cuda/bin:/usr/src/tensorrt/bin:$PATH
 QUICK=${QUICK:-0}
 ITERS=$([ "$QUICK" = 1 ] && echo 200 || echo 1000)
 WARMUP=$([ "$QUICK" = 1 ] && echo 50 || echo 100)

@@ -29,6 +29,15 @@ pip install cmake numpy opencv-python-headless matplotlib pyyaml onnx pytest
 SKIP_PIP=1 bash scripts/gpu/run_all.sh
 ```
 
+**Google Colab (T4 GPU runtime)** — no Docker there; TensorRT comes from NVIDIA's apt repo:
+
+```bash
+!git clone -q -b tier2-gpu https://github.com/sreeram-revoori/NuroSim-Lite.git
+%cd NuroSim-Lite
+!bash scripts/gpu/colab_setup.sh
+!QUICK=1 SKIP_PIP=1 bash scripts/gpu/run_all.sh
+```
+
 **Any machine with CUDA + TensorRT installed:** `bash scripts/gpu/run_all.sh`
 (`QUICK=1` for a ~5-minute smoke run; `-DTENSORRT_ROOT=` if TensorRT is a tarball install).
 
