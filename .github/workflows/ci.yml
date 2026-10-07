@@ -8,6 +8,7 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,6 +23,7 @@ jobs:
   deploy-gate:
     needs: tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -43,6 +45,7 @@ jobs:
   # misuse without pulling the multi-GB TensorRT libraries.
   cpp:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -59,20 +62,28 @@ jobs:
           cmake -S gpu -B build-host -DD2D_HOST_ONLY=ON
           cmake --build build-host -j4
           ctest --test-dir build-host --output-on-failure --no-tests=error
+      # NVIDIA's apt server occasionally stalls a download indefinitely: every
+      # network call gets a timeout and three attempts, and the step a ceiling.
       - name: CUDA toolkit (nvcc + headers only)
+        timeout-minutes: 12
         run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          retry() { for i in 1 2 3; do timeout 240 "$@" && return 0; echo "attempt $i failed: $*"; sleep 15; done; return 1; }
+          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          retry wget -q --timeout=30 --tries=3 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
           sudo dpkg -i cuda-keyring_1.1-1_all.deb
-          sudo apt-get update -q
+          retry sudo apt-get $APT update -q
           c=$(echo "${{ matrix.cuda }}" | tr . -)
-          sudo apt-get install -y -q --no-install-recommends cuda-nvcc-$c cuda-cudart-dev-$c cuda-nvtx-$c
+          retry sudo apt-get $APT install -y -q --no-install-recommends cuda-nvcc-$c cuda-cudart-dev-$c cuda-nvtx-$c
           echo "/usr/local/cuda-${{ matrix.cuda }}/bin" >> "$GITHUB_PATH"
       - name: TensorRT headers (no libraries)
+        timeout-minutes: 8
         run: |
+          retry() { for i in 1 2 3; do timeout 120 "$@" && return 0; echo "attempt $i failed: $*"; sleep 15; done; return 1; }
           ver=$(apt-cache madison libnvinfer-headers-dev | awk '{print $3}' | grep -m1 -E '${{ matrix.pat }}')
           echo "TensorRT headers $ver"
           mkdir -p trt && cd trt
-          apt-get download "libnvinfer-headers-dev=$ver" "libnvinfer-headers-plugin-dev=$ver" "libnvonnxparsers-dev=$ver"
+          retry apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 \
+            download "libnvinfer-headers-dev=$ver" "libnvinfer-headers-plugin-dev=$ver" "libnvonnxparsers-dev=$ver"
           for d in *.deb; do dpkg -x "$d" .; done
           find . -name 'Nv*.h' | sort
       - name: Compile GPU sources (no link)
@@ -86,6 +97,7 @@ jobs:
   platform:
     needs: tests
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
