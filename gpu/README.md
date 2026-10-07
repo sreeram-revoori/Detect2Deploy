@@ -31,8 +31,8 @@ SKIP_PIP=1 bash scripts/gpu/run_all.sh
 **Google Colab (T4 GPU runtime)** — no Docker there; TensorRT comes from NVIDIA's apt repo:
 
 ```bash
-!git clone -q https://github.com/sreeram-revoori/NuroSim-Lite.git
-%cd NuroSim-Lite
+!git clone -q https://github.com/sreeram-revoori/Detect2Deploy.git
+%cd Detect2Deploy
 !bash scripts/gpu/colab_setup.sh
 !QUICK=1 SKIP_PIP=1 bash scripts/gpu/run_all.sh
 ```

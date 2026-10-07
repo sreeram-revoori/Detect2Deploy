@@ -16,8 +16,8 @@ model version is allowed into production.
 ## Google Colab (T4 GPU runtime)
 
 ```python
-!git clone -q https://github.com/sreeram-revoori/NuroSim-Lite.git
-%cd /content/NuroSim-Lite
+!git clone -q https://github.com/sreeram-revoori/Detect2Deploy.git
+%cd /content/Detect2Deploy
 !bash scripts/gpu/colab_setup.sh            # TensorRT + onnxruntime-gpu (same as Tier 2)
 !bash scripts/platform/colab_run.sh         # ~25 min; QUICK=1 for ~8 min
 ```
@@ -34,7 +34,7 @@ Any Linux VM with an NVIDIA GPU, a recent driver, Docker and the NVIDIA Containe
 (e.g. GCP `g2-standard-8` with an L4, or a GCP/AWS deep-learning image, which ship all three).
 
 ```bash
-git clone https://github.com/sreeram-revoori/NuroSim-Lite.git && cd NuroSim-Lite
+git clone https://github.com/sreeram-revoori/Detect2Deploy.git && cd Detect2Deploy
 USD_PER_HOUR=0.85 bash scripts/platform/vm_run.sh      # the VM's hourly price → $ / 1M frames
 ```
 

@@ -8,7 +8,7 @@
 > (per class, per weather condition), measure tail latency, and block the release
 > in CI when a variant breaks its accuracy or latency budget.
 
-[![ci](https://github.com/sreeram-revoori/NuroSim-Lite/actions/workflows/ci.yml/badge.svg)](https://github.com/sreeram-revoori/NuroSim-Lite/actions/workflows/ci.yml)
+[![ci](https://github.com/sreeram-revoori/Detect2Deploy/actions/workflows/ci.yml/badge.svg)](https://github.com/sreeram-revoori/Detect2Deploy/actions/workflows/ci.yml)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 [![ONNX Runtime 1.30](https://img.shields.io/badge/onnxruntime-1.30-informational.svg)](https://onnxruntime.ai/)
 
