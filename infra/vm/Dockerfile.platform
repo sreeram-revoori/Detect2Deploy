@@ -1,0 +1,4 @@
+# nurosim-gpu (TensorRT 25.01 container + repo deps, see gpu/Dockerfile) + Tier-3 deps.
+ARG BASE=nurosim-gpu
+FROM ${BASE}
+RUN pip install --no-cache-dir "ray[data]" mlflow "tritonclient[grpc]" nvidia-ml-py pyarrow

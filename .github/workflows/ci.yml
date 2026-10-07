@@ -36,3 +36,67 @@ jobs:
         with:
           name: deploy-reports
           path: reports/
+
+  # C++ / CUDA / TensorRT code for the GPU path. No GPU on GitHub runners, so:
+  # host tests run for real; GPU sources are compiled (not linked) with nvcc
+  # against the real TensorRT *headers* from NVIDIA's apt repo — catches API
+  # misuse without pulling the multi-GB TensorRT libraries.
+  cpp:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:   # TensorRT header version × nvcc version
+          - {trt: "8.6",    cuda: "12.8", pat: '^8\.6\..*cuda12'}      # JetPack 6.0 (Jetson Orin)
+          - {trt: "10.8",   cuda: "12.8", pat: '^10\.8\..*cuda12'}     # TensorRT container 25.01
+          - {trt: "10.14",  cuda: "13.0", pat: '^10\.14\..*cuda13\.0'} # Google Colab (CUDA 13.0)
+          - {trt: "latest", cuda: "12.8", pat: 'cuda12'}                # newest release
+    name: cpp (TensorRT ${{ matrix.trt }}, CUDA ${{ matrix.cuda }})
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host library + tests (no CUDA)
+        run: |
+          cmake -S gpu -B build-host -DNUROSIM_HOST_ONLY=ON
+          cmake --build build-host -j4
+          ctest --test-dir build-host --output-on-failure --no-tests=error
+      - name: CUDA toolkit (nvcc + headers only)
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update -q
+          c=$(echo "${{ matrix.cuda }}" | tr . -)
+          sudo apt-get install -y -q --no-install-recommends cuda-nvcc-$c cuda-cudart-dev-$c cuda-nvtx-$c
+          echo "/usr/local/cuda-${{ matrix.cuda }}/bin" >> "$GITHUB_PATH"
+      - name: TensorRT headers (no libraries)
+        run: |
+          ver=$(apt-cache madison libnvinfer-headers-dev | awk '{print $3}' | grep -m1 -E '${{ matrix.pat }}')
+          echo "TensorRT headers $ver"
+          mkdir -p trt && cd trt
+          apt-get download "libnvinfer-headers-dev=$ver" "libnvinfer-headers-plugin-dev=$ver" "libnvonnxparsers-dev=$ver"
+          for d in *.deb; do dpkg -x "$d" .; done
+          find . -name 'Nv*.h' | sort
+      - name: Compile GPU sources (no link)
+        run: |
+          cmake -S gpu -B build-gpu -DNUROSIM_COMPILE_ONLY=ON -DTENSORRT_ROOT="$PWD/trt/usr" \
+                -DCMAKE_CUDA_ARCHITECTURES="75;87;89" -DCMAKE_CUDA_COMPILER="/usr/local/cuda-${{ matrix.cuda }}/bin/nvcc"
+          cmake --build build-gpu -j4 -- -k
+
+  # Tier 3 on CPU: unit tests, then a real PyTriton (Triton Inference Server)
+  # serving two models, driven by the gRPC load generator and the shadow check.
+  platform:
+    needs: tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-platform.txt
+      - run: python -m pytest tests/test_platform.py -q
+      - name: Serving environment (Python 3.12, numpy < 2 for PyTriton)
+        run: echo "NUROSIM_SERVE_PYTHON=$(bash scripts/platform/make_serve_env.sh --cpu | tail -1)" >> "$GITHUB_ENV"
+      - name: PyTriton serving smoke test
+        run: python -m nurosim.platform smoke
+      - if: failure()
+        run: cat build/platform_smoke/server.log || true

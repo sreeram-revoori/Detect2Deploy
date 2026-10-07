@@ -1,6 +1,6 @@
 .PHONY: install install-train test test-cov run run-fast run-model run-mlflow mlflow-ui \
         dataset train export quantize parity bench gate deploy ci-gate \
-        docker-build docker-run clean
+        cpp-test gpu-run gpu-docker-build gpu-docker-run docker-build docker-run clean
 
 PY      ?= python
 PROFILE ?= m4
@@ -61,6 +61,34 @@ deploy:            ## quantize → parity → bench → gate
 
 ci-gate:
 	$(PY) -m nurosim.deploy all --profile ci-cpu
+
+# ── GPU / TensorRT (Tier 2) ───────────────────────────────────────────────────
+cpp-test:          ## host-only C++ build + tests (no CUDA needed)
+	cmake -S gpu -B build/cpp-host -DNUROSIM_HOST_ONLY=ON && cmake --build build/cpp-host -j4
+	ctest --test-dir build/cpp-host --output-on-failure --no-tests=error
+
+gpu-run:           ## everything, on a machine with an NVIDIA GPU (or Jetson)
+	bash scripts/gpu/run_all.sh
+
+gpu-docker-build:
+	docker build -f gpu/Dockerfile -t nurosim-gpu .
+
+gpu-docker-run:
+	docker run --rm --gpus all -v "$(PWD)/reports:/workspace/nurosim/reports" \
+	           -v "$(PWD)/build:/workspace/nurosim/build" nurosim-gpu
+
+# ── AI platform (Tier 3) ──────────────────────────────────────────────────────
+install-platform:
+	pip install -r requirements-platform.txt
+
+platform-smoke:    ## real Triton (PyTriton) on CPU + load + shadow; Linux only
+	$(PY) -m nurosim.platform smoke
+
+platform-colab:
+	bash scripts/platform/colab_run.sh
+
+platform-vm:
+	bash scripts/platform/vm_run.sh
 
 # ── Docker ─────────────────────────────────────────────────────────────────────
 docker-build:

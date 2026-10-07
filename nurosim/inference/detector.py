@@ -41,11 +41,13 @@ class InferenceDetector:
                  provider_options: Optional[Dict[str, Any]] = None,
                  static_batch: Optional[int] = None,
                  intra_op_threads: Optional[int] = None,
-                 class_names: Optional[Dict[int, str]] = None):
+                 class_names: Optional[Dict[int, str]] = None,
+                 graph_opt: str = "all"):
         self.runtime = OrtRuntime(model_path, provider=provider,
                                   provider_options=provider_options,
                                   static_batch=static_batch,
-                                  intra_op_threads=intra_op_threads)
+                                  intra_op_threads=intra_op_threads,
+                                  graph_opt=graph_opt)
         self.conf_threshold = conf_threshold
         self.iou_threshold  = iou_threshold
         self.imgsz          = imgsz

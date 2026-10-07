@@ -11,6 +11,7 @@ models:
   fp16_mixed: models/nurosim_det_fp16_mixed.onnx # Detect-head tail kept FP32
   int8:       models/nurosim_det_int8.onnx       # QDQ, Detect-head tail kept FP32
   int8_full:  models/nurosim_det_int8_full.onnx  # QDQ, everything INT8 (naive baseline)
+  int8_trt:   models/nurosim_det_int8_trt.onnx   # as int8, float conv biases (TensorRT parser needs this)
 
 quantization:
   calib_frames: 128            # weather-stratified, disjoint from eval frames
@@ -85,8 +86,23 @@ profiles:
         provider: tensorrt
         static_batch: 1
         provider_options: {trt_fp16_enable: true}
-      int8-trt:                # QDQ model → TensorRT explicit quantisation
-        model: int8
+      int8-trt:                # QDQ model → TensorRT explicit quantisation; FP16 allowed elsewhere
+        model: int8_trt
         provider: tensorrt
         static_batch: 1
         provider_options: {trt_int8_enable: true, trt_fp16_enable: true}
+      int8_tail32-trt:         # same, FP16 off: unquantised layers (the head tail) stay FP32
+        model: int8_trt
+        provider: tensorrt
+        static_batch: 1
+        provider_options: {trt_int8_enable: true, trt_fp16_enable: false}
+      int8_noopt-trt:          # T4 run: INT8 via ORT lost 4.5 cone AP vs 1.9 in native TensorRT,
+        model: int8_trt        # and FP16 off changed nothing. Test: ORT graph rewrites off, so
+        provider: tensorrt     # TensorRT sees the Q/DQ graph exactly as exported.
+        static_batch: 1
+        graph_opt: disable
+        provider_options: {trt_int8_enable: true, trt_fp16_enable: true}
+      fp16_mixed-trt:          # FP16 graph with the head tail in FP32 (the CoreML fix)
+        model: fp16_mixed
+        provider: tensorrt
+        static_batch: 1

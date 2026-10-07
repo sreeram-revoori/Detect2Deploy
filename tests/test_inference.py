@@ -124,6 +124,14 @@ class TestRuntime:
             assert out.shape == (bs, 8, 64)
         assert rt.provider_active
 
+    def test_graph_optimisation_levels(self, tiny_detector_onnx):
+        from nurosim.inference.runtime import OrtRuntime
+        x = np.zeros((1, 3, 640, 640), np.float32)
+        ref = OrtRuntime(tiny_detector_onnx).run(x)
+        for level in ("extended", "basic", "disable"):
+            np.testing.assert_allclose(OrtRuntime(tiny_detector_onnx, graph_opt=level).run(x), ref,
+                                       rtol=1e-5, atol=1e-4)
+
     def test_static_batch_pins_shape(self, tiny_detector_onnx):
         from nurosim.inference.runtime import OrtRuntime
         rt = OrtRuntime(tiny_detector_onnx, static_batch=1)
@@ -190,6 +198,16 @@ class TestQuantize:
         x, _ = preprocess_batch([generate_scenario(1, seed=1).frame])
         ref, q = OrtRuntime(tiny_detector_onnx).run(x), OrtRuntime(out).run(x)
         assert np.abs(ref[:, 4:] - q[:, 4:]).max() < 0.05       # scores (FP32 tail)
+
+    def test_int8_for_tensorrt_has_no_int32_bias(self, tiny_detector_onnx, tmp_path):
+        import onnx
+        from nurosim.deploy.quantize import to_int8
+        out = to_int8(tiny_detector_onnx, str(tmp_path / "int8_trt.onnx"), n_calib=8, quantize_bias=False)
+        m = onnx.load(out)
+        inits = {i.name: i.data_type for i in m.graph.initializer}
+        dq_types = {inits[n.input[0]] for n in m.graph.node
+                    if n.op_type == "DequantizeLinear" and n.input[0] in inits}
+        assert onnx.TensorProto.INT32 not in dq_types and onnx.TensorProto.INT8 in dq_types
 
     def test_full_int8_collapses_scores(self, tiny_detector_onnx, tmp_path):
         """Regression test for the finding behind keep_head_tail_fp32: one INT8

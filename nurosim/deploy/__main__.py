@@ -9,6 +9,11 @@ python -m nurosim.deploy <command>
   bench     latency benchmark of every target
   gate      check reports against budgets; non-zero exit on failure
   all       quantize → parity → bench → gate
+
+  GPU / TensorRT (see gpu/README.md, scripts/gpu/run_all.sh):
+  trt-prep    frame sets + EfficientNMS graphs for the C++ tools
+  cpp-parity  score detections dumped by nurosim_bench --dump-dets
+  gpu-report  summarise a GPU run directory into SUMMARY.md
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ import argparse
 import logging
 import os
 import sys
+import traceback
 
 from nurosim.deploy.config import DEFAULT_CONFIG, load_config, load_profile
 
@@ -57,6 +63,8 @@ def cmd_quantize(args, cfg):
     to_fp16(fp32, m["fp16_mixed"], keep_head_tail_fp32=True)
     to_int8(fp32, m["int8"], keep_head_tail_fp32=True, **common)
     to_int8(fp32, m["int8_full"], keep_head_tail_fp32=False, **common)
+    if "int8_trt" in m:
+        to_int8(fp32, m["int8_trt"], keep_head_tail_fp32=True, quantize_bias=False, **common)
 
 
 def cmd_parity(args, cfg):
@@ -76,13 +84,14 @@ def cmd_bench(args, cfg):
 
 
 def cmd_gate(args, cfg):
-    from nurosim.deploy.gate import gate_markdown, load_reports, run_gate
+    from nurosim.deploy.gate import gate_markdown, load_reports, run_gate, write_gate_json
     profile = _profile(args, cfg)
     parity, bench = load_reports(profile.name, args.reports)
     checks = run_gate(cfg, profile, parity, bench)
     md = gate_markdown(profile, checks)
     with open(os.path.join(args.reports, f"gate_{profile.name}.md"), "w") as f:
         f.write(md)
+    write_gate_json(profile, checks, os.path.join(args.reports, f"gate_{profile.name}.json"), parity)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
             f.write(md + "\n")
@@ -92,6 +101,25 @@ def cmd_gate(args, cfg):
         logger.error("Gate FAILED: %d of %d checks", len(failed), len(checks))
         sys.exit(1)
     logger.info("Gate passed: %d checks", len(checks))
+
+
+def cmd_trt_prep(args, cfg):
+    from nurosim.deploy.trt_prep import prepare
+    prepare(cfg, args.out)
+
+
+def cmd_cpp_parity(args, cfg):
+    from nurosim.deploy.cpp_parity import cpp_parity_markdown, run_cpp_parity, write_cpp_parity
+    report = run_cpp_parity(cfg, args.dets)
+    path = write_cpp_parity(report, args.out)
+    print(cpp_parity_markdown(report))
+    logger.info("C++ parity report → %s", path)
+
+
+def cmd_gpu_report(args, cfg):
+    from nurosim.deploy.gpu_report import write_summary
+    path = write_summary(args.dir)
+    print(open(path).read())
 
 
 def cmd_all(args, cfg):
@@ -125,6 +153,16 @@ def main(argv=None):
 
     sub.add_parser("quantize")
 
+    p = sub.add_parser("trt-prep")
+    p.add_argument("--out", default="build/gpu")
+
+    p = sub.add_parser("cpp-parity")
+    p.add_argument("--dets", nargs="+", required=True, help="dets_<name>.json files")
+    p.add_argument("--out", required=True)
+
+    p = sub.add_parser("gpu-report")
+    p.add_argument("--dir", required=True)
+
     for name in ("parity", "bench", "gate", "all"):
         p = sub.add_parser(name)
         p.add_argument("--profile", required=True)
@@ -137,8 +175,27 @@ def main(argv=None):
                         datefmt="%H:%M:%S")
     os.makedirs(args.reports, exist_ok=True)
     cfg = load_config(args.config)
-    globals()[f"cmd_{args.cmd}"](args, cfg)
+    globals()[f"cmd_{args.cmd.replace('-', '_')}"](args, cfg)
 
 
 if __name__ == "__main__":
-    main()
+    code = 0
+    try:
+        main()
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            code = 1
+        else:
+            code = e.code or 0
+    except Exception:
+        traceback.print_exc()
+        code = 1
+    # ONNX Runtime / onnx native code intermittently aborts in static
+    # destructors at interpreter shutdown on macOS ("recursive_mutex lock
+    # failed") after all work has finished, turning success into exit 134.
+    # Everything is flushed and closed by now, so skip native teardown.
+    logging.shutdown()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)

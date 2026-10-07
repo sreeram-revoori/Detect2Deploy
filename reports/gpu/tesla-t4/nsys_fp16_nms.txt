@@ -1,0 +1,23 @@
+# nsys_fp16_nms.sqlite
+
+iterations (NVTX 'gpu' ranges): 351, steady-state analysed: 264
+kernels per iteration: 182; GPU busy 1.480 ms of a 1.648 ms span → idle gaps 0.159 ms (10%)
+
+top kernels by GPU time:
+| share | avg µs | per iter | kernel |
+|---|---|---|---|
+| 15.8% | 6.3 | 37 | `copyPackedKernel` |
+| 12.7% | 3.9 | 48 | `generatedNativePointwise` |
+| 12.3% | 15.0 | 12 | `sm75_xmma_fprop_implicit_gemm__11...` |
+| 5.1% | 15.1 | 5 | `sm75_xmma_fprop_implicit_gemm__15...` |
+| 4.9% | 9.0 | 8 | `sm75_xmma_fprop_implicit_gemm__14...` |
+| 4.4% | 21.6 | 3 | `trt_turing_h1688cudnn_256x64_s_10...` |
+| 3.3% | 16.0 | 3 | `trt_turing_h1688cudnn_256x64_l_7...` |
+| 2.7% | 40.1 | 1 | `trt_turing_h1688cudnn_128x128__28...` |
+| 2.6% | 12.7 | 3 | `DeviceSegmentedRadixSortKernel` |
+| 2.4% | 35.1 | 1 | `permutationKernelPLC3` |
+
+CPU launch cost per iteration: 183 kernel launches, 1.099 ms
+
+
+> Analysed from the SQLite export of the identical profiling step in the quick run (same engine, 300 iterations); the full run's `nsys stats` call failed on that stale export.

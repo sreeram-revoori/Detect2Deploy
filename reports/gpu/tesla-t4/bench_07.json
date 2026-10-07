@@ -1,0 +1,16 @@
+{
+  "label": "INT8 · GPU pre · NMS · graph",
+  "engine": "build/gpu/engines/int8_nms.engine",
+  "engine_mb": 5.40895,
+  "pre": "gpu",
+  "post": "efficient_nms",
+  "cuda_graph": true,
+  "batch": 1,
+  "warmup": 100,
+  "iters": 1000,
+  "device": {"name": "Tesla T4", "compute_capability": "7.5", "sms": 40, "integrated": false, "cuda_driver": 13000, "cuda_runtime": 13000, "tensorrt": "10.14.1"},
+  "cold_start": {"engine_load_ms": 280.878, "first_run_ms": 1.81821},
+  "throughput_fps": 522.337,
+  "e2e": {"n": 1000, "mean": 1.9178, "std": 0.038322, "p50": 1.9145, "p90": 1.9428, "p99": 1.9826, "max": 2.6795, "jitter_p99_p50": 0.068167},
+  "stages": {"host_pre": {"n": 1000, "mean": 0.15055, "std": 0.020515, "p50": 0.14596, "p90": 0.16568, "p99": 0.19167, "max": 0.58878, "jitter_p99_p50": 0.045716}, "post": {"n": 1000, "mean": 0.0017947, "std": 0.00067115, "p50": 0.001557, "p90": 0.0029812, "p99": 0.0035826, "max": 0.005642, "jitter_p99_p50": 0.0020256}, "gpu_total": {"n": 1000, "mean": 1.7522, "std": 0.014543, "p50": 1.752, "p90": 1.7723, "p99": 1.7862, "max": 1.7923, "jitter_p99_p50": 0.034226}}
+}
