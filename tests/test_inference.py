@@ -124,6 +124,14 @@ class TestRuntime:
             assert out.shape == (bs, 8, 64)
         assert rt.provider_active
 
+    def test_graph_optimisation_levels(self, tiny_detector_onnx):
+        from nurosim.inference.runtime import OrtRuntime
+        x = np.zeros((1, 3, 640, 640), np.float32)
+        ref = OrtRuntime(tiny_detector_onnx).run(x)
+        for level in ("extended", "basic", "disable"):
+            np.testing.assert_allclose(OrtRuntime(tiny_detector_onnx, graph_opt=level).run(x), ref,
+                                       rtol=1e-5, atol=1e-4)
+
     def test_static_batch_pins_shape(self, tiny_detector_onnx):
         from nurosim.inference.runtime import OrtRuntime
         rt = OrtRuntime(tiny_detector_onnx, static_batch=1)

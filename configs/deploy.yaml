@@ -96,6 +96,12 @@ profiles:
         provider: tensorrt
         static_batch: 1
         provider_options: {trt_int8_enable: true, trt_fp16_enable: false}
+      int8_noopt-trt:          # T4 run: INT8 via ORT lost 4.5 cone AP vs 1.9 in native TensorRT,
+        model: int8_trt        # and FP16 off changed nothing. Test: ORT graph rewrites off, so
+        provider: tensorrt     # TensorRT sees the Q/DQ graph exactly as exported.
+        static_batch: 1
+        graph_opt: disable
+        provider_options: {trt_int8_enable: true, trt_fp16_enable: true}
       fp16_mixed-trt:          # FP16 graph with the head tail in FP32 (the CoreML fix)
         model: fp16_mixed
         provider: tensorrt

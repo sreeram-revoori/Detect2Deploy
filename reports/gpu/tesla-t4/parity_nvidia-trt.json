@@ -1,0 +1,341 @@
+{
+  "profile": "nvidia-trt",
+  "reference": "fp32-cpu",
+  "host": "Linux-6.6.122+-x86_64-with-glibc2.39",
+  "eval": {
+    "n_scenarios": 300,
+    "conf_threshold": 0.01,
+    "raw_parity_frames": 16,
+    "seed": 100000,
+    "deploy_conf": 0.25
+  },
+  "accuracy_budget": {
+    "max_map50_drop": 0.01,
+    "max_map50_drop_per_weather": 0.02,
+    "max_ap50_drop_per_class": 0.03
+  },
+  "negative_controls": [],
+  "targets": {
+    "fp32-cpu": {
+      "variant": "fp32",
+      "provider": "cpu",
+      "model_sha256": "4446d7299936",
+      "active_providers": [
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9655758233564704,
+        "map50_95": 0.8552026010661926,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702404526147982,
+          "cyclist": 0.9900990098977247,
+          "cone": 0.9118648210132302
+        },
+        "weather_map50": {
+          "clear": 0.9724350518438213,
+          "rain": 0.9647292876885427,
+          "fog": 0.962176480795292,
+          "night": 0.9663692664351442
+        },
+        "n_gt": 2242
+      }
+    },
+    "fp32-cuda": {
+      "variant": "fp32",
+      "provider": "cuda",
+      "model_sha256": "4446d7299936",
+      "active_providers": [
+        "CUDAExecutionProvider",
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9655758233564704,
+        "map50_95": 0.8552026010661926,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702404526147982,
+          "cyclist": 0.9900990098977247,
+          "cone": 0.9118648210132302
+        },
+        "weather_map50": {
+          "clear": 0.9724350518438213,
+          "rain": 0.9647292876885427,
+          "fog": 0.962176480795292,
+          "night": 0.9663692664351442
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": 0.0,
+        "map50_95_drop": 0.0,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": 0.0,
+          "cyclist": 0.0,
+          "cone": 0.0
+        },
+        "weather_map50_drop": {
+          "clear": 0.0,
+          "rain": 0.0,
+          "fog": 0.0,
+          "night": 0.0
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2250,
+        "ref_recall": 1.0,
+        "target_precision": 1.0,
+        "mean_match_iou": 1.0,
+        "mean_abs_conf_delta": 1.3800462086995442e-07
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 4.3052264118159655e-06,
+        "box_max_err_px": 6.103515625e-05,
+        "score_mae": 3.74126685187548e-08,
+        "score_max_err": 5.155801773071289e-06,
+        "class_agreement": 1.0
+      }
+    },
+    "fp16-trt": {
+      "variant": "fp32",
+      "provider": "tensorrt",
+      "model_sha256": "4446d7299936",
+      "active_providers": [
+        "TensorrtExecutionProvider",
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9655783239026469,
+        "map50_95": 0.855681727258025,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702404526147982,
+          "cyclist": 0.9900990098977247,
+          "cone": 0.911874823197936
+        },
+        "weather_map50": {
+          "clear": 0.9724240847158584,
+          "rain": 0.9647292876885427,
+          "fog": 0.962176480795292,
+          "night": 0.9663692664351442
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": -2.5005461764537884e-06,
+        "map50_95_drop": -0.0004791261918324352,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": 0.0,
+          "cyclist": 0.0,
+          "cone": -1.0002184705815154e-05
+        },
+        "weather_map50_drop": {
+          "clear": 1.0967127962890899e-05,
+          "rain": 0.0,
+          "fog": 0.0,
+          "night": 0.0
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2250,
+        "ref_recall": 1.0,
+        "target_precision": 1.0,
+        "mean_match_iou": 0.9996123123189045,
+        "mean_abs_conf_delta": 0.00033923653761545815
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 0.007988065481185913,
+        "box_max_err_px": 0.0641326904296875,
+        "score_mae": 8.235414270529873e-07,
+        "score_max_err": 0.01277238130569458,
+        "class_agreement": 1.0
+      }
+    },
+    "int8-trt": {
+      "variant": "int8_trt",
+      "provider": "tensorrt",
+      "model_sha256": "fb14f0cd56f4",
+      "active_providers": [
+        "TensorrtExecutionProvider",
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9542914444039665,
+        "map50_95": 0.8152986509223659,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9700097046926608,
+          "cyclist": 0.9900990098977116,
+          "cone": 0.8669580531253656
+        },
+        "weather_map50": {
+          "clear": 0.9684175468362215,
+          "rain": 0.9538750677094185,
+          "fog": 0.942244767018956,
+          "night": 0.9500168992992467
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": 0.011284378952503893,
+        "map50_95_drop": 0.03990395014382675,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": 0.0002307479221373976,
+          "cyclist": 1.3100631690576847e-14,
+          "cone": 0.04490676788786463
+        },
+        "weather_map50_drop": {
+          "clear": 0.0040175050075997865,
+          "rain": 0.010854219979124169,
+          "fog": 0.01993171377633607,
+          "night": 0.016352367135897494
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2225,
+        "ref_recall": 0.9884444444444445,
+        "target_precision": 0.9995505617977528,
+        "mean_match_iou": 0.9785205456366395,
+        "mean_abs_conf_delta": 0.017783558411563902
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 0.15941457450389862,
+        "box_max_err_px": 1.8316192626953125,
+        "score_mae": 4.255257226759568e-05,
+        "score_max_err": 0.7986406683921814,
+        "class_agreement": 0.9987515605493134
+      }
+    },
+    "int8_tail32-trt": {
+      "variant": "int8_trt",
+      "provider": "tensorrt",
+      "model_sha256": "fb14f0cd56f4",
+      "active_providers": [
+        "TensorrtExecutionProvider",
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9542914444039665,
+        "map50_95": 0.8172301816336598,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9700097046926608,
+          "cyclist": 0.9900990098977116,
+          "cone": 0.8669580531253656
+        },
+        "weather_map50": {
+          "clear": 0.9684175468362215,
+          "rain": 0.9538750677094185,
+          "fog": 0.942244767018956,
+          "night": 0.9500168992992467
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": 0.011284378952503893,
+        "map50_95_drop": 0.03797241943253282,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": 0.0002307479221373976,
+          "cyclist": 1.3100631690576847e-14,
+          "cone": 0.04490676788786463
+        },
+        "weather_map50_drop": {
+          "clear": 0.0040175050075997865,
+          "rain": 0.010854219979124169,
+          "fog": 0.01993171377633607,
+          "night": 0.016352367135897494
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2225,
+        "ref_recall": 0.9884444444444445,
+        "target_precision": 0.9995505617977528,
+        "mean_match_iou": 0.9786716036508412,
+        "mean_abs_conf_delta": 0.017783558411563902
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 0.15916520357131958,
+        "box_max_err_px": 1.835968017578125,
+        "score_mae": 4.255257226759568e-05,
+        "score_max_err": 0.7986406683921814,
+        "class_agreement": 0.9987515605493134
+      }
+    },
+    "fp16_mixed-trt": {
+      "variant": "fp16_mixed",
+      "provider": "tensorrt",
+      "model_sha256": "b45e802ade19",
+      "active_providers": [
+        "TensorrtExecutionProvider",
+        "CPUExecutionProvider"
+      ],
+      "provider_active": true,
+      "metrics": {
+        "map50": 0.9655758233564704,
+        "map50_95": 0.8552057774751993,
+        "per_class_ap50": {
+          "vehicle": 0.9900990099001283,
+          "pedestrian": 0.9702404526147982,
+          "cyclist": 0.9900990098977247,
+          "cone": 0.9118648210132302
+        },
+        "weather_map50": {
+          "clear": 0.9724350518438213,
+          "rain": 0.9647292876885427,
+          "fog": 0.962176480795292,
+          "night": 0.9663692664351442
+        },
+        "n_gt": 2242
+      },
+      "delta_vs_reference": {
+        "map50_drop": 0.0,
+        "map50_95_drop": -3.1764090067110118e-06,
+        "per_class_ap50_drop": {
+          "vehicle": 0.0,
+          "pedestrian": 0.0,
+          "cyclist": 0.0,
+          "cone": 0.0
+        },
+        "weather_map50_drop": {
+          "clear": 0.0,
+          "rain": 0.0,
+          "fog": 0.0,
+          "night": 0.0
+        }
+      },
+      "detection_agreement": {
+        "ref_dets": 2250,
+        "target_dets": 2250,
+        "ref_recall": 1.0,
+        "target_precision": 1.0,
+        "mean_match_iou": 1.0,
+        "mean_abs_conf_delta": 3.5010059674580895e-05
+      },
+      "tensor_parity": {
+        "confident_anchors": 801,
+        "box_mae_px": 0.0006584115326404572,
+        "box_max_err_px": 0.005889892578125,
+        "score_mae": 1.8407629909233947e-07,
+        "score_max_err": 0.003812342882156372,
+        "class_agreement": 1.0
+      }
+    }
+  }
+}

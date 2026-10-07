@@ -194,8 +194,11 @@ if command -v nsys >/dev/null 2>&1 && [ -f "$ENG/fp16_nms.engine" ]; then
     step "nsys profile $name" nsys profile --force-overwrite true --trace cuda,nvtx,osrt -o "$OUT/$name" \
          "$BIN/nurosim_bench" --engine "$ENG/fp16_nms.engine" --frames "$BUILD/bench.nsfr" \
          --pre gpu --iters 300 --warmup 50 $mode
-    nsys stats --report nvtx_sum,cuda_gpu_kern_sum,cuda_api_sum "$OUT/$name.nsys-rep" > "$OUT/$name.txt" 2>/dev/null \
-      || nsys stats --report nvtxsum,gpukernsum,cudaapisum "$OUT/$name.nsys-rep" > "$OUT/$name.txt" 2>&1 || true
+    # Own analysis of the SQLite export: `nsys stats` report names change between
+    # versions, and a stale export from an earlier run makes it refuse to run.
+    nsys export --type sqlite --force-overwrite true -o "$OUT/$name.sqlite" "$OUT/$name.nsys-rep" >> "$OUT/run.log" 2>&1 \
+      && $PY scripts/gpu/nsys_analyze.py "$OUT/$name.sqlite" > "$OUT/$name.txt" 2>> "$OUT/run.log" \
+      && rm -f "$OUT/$name.sqlite"
   done
 else
   log "nsys not found — skipping Nsight Systems profiles (install nsight-systems-cli)"

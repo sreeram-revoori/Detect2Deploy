@@ -27,11 +27,12 @@ class Target:
     static_batch: Optional[int] = None
     p99_budget_ms: Optional[float] = None   # end-to-end, batch 1; None = not gated
     expect_fail: bool = False               # negative control: accuracy gate MUST trip
+    graph_opt: str = "all"                  # ORT graph optimisation level (all|extended|basic|disable)
 
     def detector_kwargs(self) -> Dict[str, Any]:
         return dict(model_path=self.model_path, provider=self.provider,
                     provider_options=self.provider_options or None,
-                    static_batch=self.static_batch)
+                    static_batch=self.static_batch, graph_opt=self.graph_opt)
 
 
 @dataclass
@@ -72,6 +73,7 @@ def load_profile(cfg: Dict[str, Any], name: str,
             static_batch=t.get("static_batch"),
             p99_budget_ms=t.get("p99_budget_ms"),
             expect_fail=bool(t.get("expect_fail", False)),
+            graph_opt=t.get("graph_opt", "all"),
         ))
     return Profile(name=name, description=p.get("description", ""),
                    reference=p["reference"], targets=targets,

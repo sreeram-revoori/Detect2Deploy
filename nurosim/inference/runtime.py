@@ -64,7 +64,8 @@ class OrtRuntime:
                  provider: str = "cpu",
                  provider_options: Optional[Dict[str, Any]] = None,
                  static_batch: Optional[int] = None,
-                 intra_op_threads: Optional[int] = None):
+                 intra_op_threads: Optional[int] = None,
+                 graph_opt: str = "all"):
         try:
             import onnxruntime as ort
         except ImportError as e:
@@ -93,7 +94,14 @@ class OrtRuntime:
             model_bytes = fix_dim_params(model_bytes, {"batch": static_batch})
 
         so = ort.SessionOptions()
-        so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        # "disable" hands the graph to the EP untouched — e.g. so ORT's own
+        # Q/DQ rewrites can't change what TensorRT quantises.
+        so.graph_optimization_level = {
+            "all": ort.GraphOptimizationLevel.ORT_ENABLE_ALL,
+            "extended": ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED,
+            "basic": ort.GraphOptimizationLevel.ORT_ENABLE_BASIC,
+            "disable": ort.GraphOptimizationLevel.ORT_DISABLE_ALL,
+        }[graph_opt]
         if intra_op_threads:
             so.intra_op_num_threads = intra_op_threads
         so.log_severity_level = 3

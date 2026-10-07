@@ -5,12 +5,11 @@ makes it *fast* on NVIDIA hardware and measures where the time goes: a C++
 TensorRT pipeline with GPU preprocessing, in-engine NMS, CUDA graphs, and a
 two-model contention benchmark — plus one script that runs all of it.
 
-> **Status: ready to run, not yet run on a GPU.** What has been verified without one:
-> host-side C++ (decode, NMS, letterbox reference, stats, I/O) is unit-tested on macOS
-> and Linux and matches the Python decode exactly (709/709 detections on real model
-> output); the NMS graph surgery is checked against ONNX Runtime; all CUDA / TensorRT
-> sources compile in CI with `nvcc` against real TensorRT 8.6, 10.8 and 11.x headers. Kernel correctness,
-> engine builds and every latency number need the GPU run.
+> **First run: Tesla T4 (Google Colab, TensorRT 10.14, CUDA 13.0)** — results in
+> [`reports/gpu/tesla-t4/SUMMARY.md`](../reports/gpu/tesla-t4/SUMMARY.md) and summarised in the
+> [main README](../README.md#nvidia--tensorrt-tier-2--tesla-t4-results). Every step ran,
+> after two fixes the run itself surfaced (INT8 biases for TensorRT, NumPy-safe report JSON).
+> Not yet run: Jetson Orin (DLA) and the `int8_noopt-trt` follow-up experiment.
 
 ## Run it
 

@@ -177,24 +177,69 @@ pip install -r requirements-train.txt
 make dataset train export
 ```
 
-### NVIDIA / TensorRT (Tier 2)
+### NVIDIA / TensorRT (Tier 2) — Tesla T4 results
 
-[`gpu/`](gpu/README.md) adds a C++ TensorRT pipeline and one script that runs every
-GPU experiment: a latency matrix that adds one optimisation per row (FP16, fused GPU
-letterbox kernel, in-engine EfficientNMS, CUDA graphs, FP32-pinned head tail, INT8,
-DLA on Orin) with CUDA-event stage timing; accuracy parity of the engines on the same
-held-out scenes and budgets; a batch sweep; a two-model contention test (30 Hz detector
-vs a saturating batch-8 model, with and without stream priorities); Nsight Systems
-profiles; and the `nvidia-trt` ONNX Runtime profile above.
+[`gpu/`](gpu/README.md) adds a C++ TensorRT pipeline and one script that runs every GPU
+experiment. First run: **Tesla T4** on Google Colab, TensorRT 10.14, CUDA 13.0 — full
+output in [`reports/gpu/tesla-t4/SUMMARY.md`](reports/gpu/tesla-t4/SUMMARY.md).
+
+**Latency, batch 1 — each row changes one thing** (ms, end-to-end incl. pre/post):
+
+| config | e2e p50 | e2e p99 | jitter | what changed |
+|---|---|---|---|---|
+| FP32 · CPU letterbox · CPU NMS | 5.83 | 6.58 | 0.74 | baseline |
+| FP16 · CPU letterbox · CPU NMS | 3.65 | 5.53 | 1.88 | engine 4.29 → 1.32 ms |
+| FP16 · **GPU letterbox** · CPU NMS | **1.97** | **2.06** | **0.10** | host pre 1.75 → 0.15 ms; H2D 0.41 → 0.11 ms (uint8) |
+| + EfficientNMS in the engine | 1.96 | 2.04 | 0.08 | post 0.09 → 0.001 ms, engine +0.09 ms |
+| + CUDA graph | 1.98 | 2.04 | 0.06 | CPU submit 1.10 → ~0.36 ms / frame |
+| FP16 + FP32 head tail (pinned) | 2.02 | 2.43 | 0.41 | lossless accuracy |
+| INT8 (+ FP32 head tail) | 1.92 | 1.98 | 0.07 | −3 % latency, −3.3 pts mAP@.5:.95 |
+
+**Accuracy on the 300 held-out scenes** (reference: ONNX Runtime FP32, mAP@0.5 0.9656, cone AP 0.912):
+FP32 engine through the full C++ path reproduces 100 % of reference detections; FP16 with
+EfficientNMS −0.003 mAP / cone −0.011; **FP16 + FP32 tail ±0.000 / cone 0.912**; INT8 −0.005 / cone −0.019.
+
+What the T4 run showed:
+
+1. **The network wasn't the bottleneck; preprocessing was.** Moving the letterbox into one
+   CUDA kernel (0.03 ms) cut p50 46 % and p99 63 %, and jitter from 1.9 to 0.1 ms. The
+   uint8 frame also shrinks the copy 4x (H2D 0.41 → 0.11 ms).
+2. **EfficientNMS and CUDA graphs didn't reduce latency, and the profile says why.** In-engine
+   NMS traded 0.09 ms of CPU post for 0.09 ms of GPU work. Without graphs the CPU already
+   launched the 183 kernels per frame faster than the GPU ran them, so GPU time was
+   unchanged (1.80 vs 1.82 ms). The graph's win is CPU: 1.10 → ~0.36 ms of submission work per
+   frame, which a shared vehicle CPU can spend elsewhere.
+3. **INT8 isn't worth it for this model on a T4.** 3 % faster, 3.3 pts mAP@.5:.95 worse:
+   ~28 % of GPU time is layout-conversion copies (37 per frame) and pointwise kernels that
+   INT8 doesn't accelerate. FP16 with an FP32 head tail is the deployment choice.
+4. **TensorRT's FP16 precision depends on the surrounding graph.** The raw-output FP16 engine
+   and ORT's FP16 TensorRT path were lossless; the same FP16 build with EfficientNMS appended
+   lost 1.1 cone AP. Pinning the head tail to FP32 fixed it — the same fix as on CoreML.
+5. **Same INT8 file, three runtimes, three accuracies.** mAP@0.5 vs FP32: native TensorRT
+   −0.47 pts (passes), ORT CPU on M4 −0.66 pts (passes), ORT's TensorRT EP −1.13 pts with
+   cone AP −4.5 pts (the gate blocks it). Turning FP16 off in ORT changed nothing, so it isn't the FP16-tail
+   effect. **Not yet explained**; the next run tests ORT with its graph rewrites disabled
+   (`int8_noopt-trt`).
+6. **A co-located model triples the detector's tail; stream priority recovers two-thirds.**
+   Detector alone at 30 Hz: p99 3.75 ms. With a saturating batch-8 model: p99 11.9 ms.
+   Detector on a high-priority stream: p99 6.5 ms, for −1.3 % background throughput.
+7. **Duty cycle matters.** The same engine fed at 30 Hz ran p50 3.6 ms vs 2.0 ms back to back —
+   consistent with the GPU dropping clocks between frames (clocks weren't locked on Colab).
+   Real deadlines need locked clocks (`nvidia-smi -lgc` / `jetson_clocks`) or a benchmark at
+   the real frame rate.
+8. **The Python path costs 5x.** ONNX Runtime + TensorRT EP from Python: 9.8 ms end to end vs
+   1.96 ms in C++ — OpenCV preprocessing 4.6 ms on Colab's 2 vCPUs, and a 4.3 ms inference
+   stage vs 1.69 ms of GPU compute because float32 tensors cross pageable memory each frame.
+
+The harness checks itself: TensorRT's `trtexec` measures 1.687 ms GPU compute for the same
+engine vs 1.648 ms from the harness's CUDA events (2.4 %). Not covered by a T4: DLA (Orin
+only) and anything about Orin's absolute speed.
 
 ```bash
 make gpu-docker-build && make gpu-docker-run     # x86 + NVIDIA GPU (TensorRT container)
+bash scripts/gpu/colab_setup.sh && bash scripts/gpu/run_all.sh   # Google Colab (T4)
 bash scripts/gpu/run_all.sh                      # Jetson Orin / bare metal
 ```
-
-> **Ready, not yet run.** No NVIDIA hardware was available. Host-side C++ is unit-tested
-> and matches the Python decode exactly (709/709 detections); GPU sources are
-> compile-checked in CI against real TensorRT headers. All GPU numbers are still to come.
 
 ---
 
@@ -243,12 +288,12 @@ NuroSim-Lite/
 │       └── config.py, seeds.py
 ├── configs/deploy.yaml         # variants, profiles, targets, budgets
 ├── models/                     # FP32 reference + model card
-├── reports/                    # latest parity / benchmark / gate reports (M4)
+├── reports/                    # parity / benchmark / gate reports (M4); gpu/tesla-t4/ (T4 run)
 ├── gpu/                        # Tier 2: C++ TensorRT pipeline, CUDA kernel, tools, tests
 ├── scripts/
 │   ├── cpu_batch_scaling.py
 │   └── gpu/run_all.sh          # every GPU experiment, one command
-├── tests/                      # 59 Python tests; a tiny generated ONNX model stands in for CI
+├── tests/                      # 60 Python tests; a tiny generated ONNX model stands in for CI
 ├── main.py                     # original evaluation pipeline (--model for a real detector)
 └── .github/workflows/ci.yml    # tests + deploy gate
 ```

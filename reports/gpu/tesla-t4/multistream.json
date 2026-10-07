@@ -1,0 +1,11 @@
+{
+  "engine_a": "build/gpu/engines/fp16_mixed_nms.engine", "engine_b": "build/gpu/engines/fp16.engine", "rate_a_hz": 30, "batch_b": 8, "duration_s": 8,
+  "stream_priority_range": [0, -5],
+  "device": {"name": "Tesla T4", "compute_capability": "7.5", "sms": 40, "integrated": false, "cuda_driver": 13000, "cuda_runtime": 13000, "tensorrt": "10.14.1"},
+  "phases": [
+    {"name": "a_solo", "a": {"n": 240, "mean": 3.3837, "std": 0.48691, "p50": 3.6014, "p90": 3.693, "p99": 3.7459, "max": 3.7885, "jitter_p99_p50": 0.1445}, "a_frames": 240, "a_deadline_misses": 0, "b_fps": 0},
+    {"name": "b_solo", "a": {"n": 0, "mean": 0, "std": 0, "p50": 0, "p90": 0, "p99": 0, "max": 0, "jitter_p99_p50": 0}, "a_frames": 0, "a_deadline_misses": 0, "b_fps": 646.883},
+    {"name": "concurrent_equal_priority", "a": {"n": 240, "mean": 6.5538, "std": 2.6121, "p50": 6.1829, "p90": 10.063, "p99": 11.881, "max": 12.013, "jitter_p99_p50": 5.6977}, "a_frames": 240, "a_deadline_misses": 0, "b_fps": 617.673},
+    {"name": "concurrent_a_high_priority", "a": {"n": 240, "mean": 4.5309, "std": 0.95195, "p50": 4.7921, "p90": 5.453, "p99": 6.5134, "max": 7.1989, "jitter_p99_p50": 1.7213}, "a_frames": 240, "a_deadline_misses": 0, "b_fps": 610.34}
+  ]
+}
