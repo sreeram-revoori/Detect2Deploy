@@ -165,6 +165,7 @@ the `ci-cpu` profile on each push/PR; the gate table lands in the job summary.
 
 ```bash
 pip install -r requirements.txt                     # inference + deploy pipeline (no torch)
+make cpp-test                                       # C++ host library + tests (no CUDA)
 
 make deploy PROFILE=m4                              # quantize → parity → bench → gate
 make ci-gate                                        # what CI runs
@@ -176,20 +177,24 @@ pip install -r requirements-train.txt
 make dataset train export
 ```
 
-### NVIDIA / TensorRT
+### NVIDIA / TensorRT (Tier 2)
 
-The `nvidia-trt` profile runs the same artefacts through the CUDA and TensorRT EPs
-(`pip install onnxruntime-gpu`). The INT8 model is QDQ with symmetric scales, which
-TensorRT consumes as explicit quantisation; `fp16-trt` uses `trt_fp16_enable` on the
-FP32 model.
-
-> **Not yet run.** No NVIDIA hardware was available when this was written, so this
-> profile has no latency budgets and no results. Running it on a GPU / Jetson Orin
-> is the next step.
+[`gpu/`](gpu/README.md) adds a C++ TensorRT pipeline and one script that runs every
+GPU experiment: a latency matrix that adds one optimisation per row (FP16, fused GPU
+letterbox kernel, in-engine EfficientNMS, CUDA graphs, FP32-pinned head tail, INT8,
+DLA on Orin) with CUDA-event stage timing; accuracy parity of the engines on the same
+held-out scenes and budgets; a batch sweep; a two-model contention test (30 Hz detector
+vs a saturating batch-8 model, with and without stream priorities); Nsight Systems
+profiles; and the `nvidia-trt` ONNX Runtime profile above.
 
 ```bash
-make deploy PROFILE=nvidia-trt
+make gpu-docker-build && make gpu-docker-run     # x86 + NVIDIA GPU (TensorRT container)
+bash scripts/gpu/run_all.sh                      # Jetson Orin / bare metal
 ```
+
+> **Ready, not yet run.** No NVIDIA hardware was available. Host-side C++ is unit-tested
+> and matches the Python decode exactly (709/709 detections); GPU sources are
+> compile-checked in CI against real TensorRT headers. All GPU numbers are still to come.
 
 ---
 
@@ -239,8 +244,11 @@ NuroSim-Lite/
 ├── configs/deploy.yaml         # variants, profiles, targets, budgets
 ├── models/                     # FP32 reference + model card
 ├── reports/                    # latest parity / benchmark / gate reports (M4)
-├── scripts/cpu_batch_scaling.py
-├── tests/                      # 54 tests; a tiny generated ONNX model stands in for CI
+├── gpu/                        # Tier 2: C++ TensorRT pipeline, CUDA kernel, tools, tests
+├── scripts/
+│   ├── cpu_batch_scaling.py
+│   └── gpu/run_all.sh          # every GPU experiment, one command
+├── tests/                      # 58 Python tests; a tiny generated ONNX model stands in for CI
 ├── main.py                     # original evaluation pipeline (--model for a real detector)
 └── .github/workflows/ci.yml    # tests + deploy gate
 ```

@@ -36,3 +36,44 @@ jobs:
         with:
           name: deploy-reports
           path: reports/
+
+  # C++ / CUDA / TensorRT code for the GPU path. No GPU on GitHub runners, so:
+  # host tests run for real; GPU sources are compiled (not linked) with nvcc
+  # against the real TensorRT *headers* from NVIDIA's apt repo — catches API
+  # misuse without pulling the multi-GB TensorRT libraries.
+  cpp:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # 8.6 = JetPack 6.0 (Jetson Orin) · 10.8 = TensorRT container 25.01 · latest = newest in NVIDIA's repo
+        trt: ["8.6", "10.8", "latest"]
+    name: cpp (TensorRT ${{ matrix.trt }})
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host library + tests (no CUDA)
+        run: |
+          cmake -S gpu -B build-host -DNUROSIM_HOST_ONLY=ON
+          cmake --build build-host -j4
+          ctest --test-dir build-host --output-on-failure --no-tests=error
+      - name: CUDA toolkit (nvcc + headers only)
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends cuda-nvcc-12-8 cuda-cudart-dev-12-8 cuda-nvtx-12-8
+          echo /usr/local/cuda-12.8/bin >> "$GITHUB_PATH"
+      - name: TensorRT headers (no libraries)
+        run: |
+          if [ "${{ matrix.trt }}" = latest ]; then pat='cuda12'; else pat="^${{ matrix.trt }}\..*cuda12"; fi
+          ver=$(apt-cache madison libnvinfer-headers-dev | awk '{print $3}' | grep -m1 -E "$pat")
+          echo "TensorRT headers $ver"
+          mkdir -p trt && cd trt
+          apt-get download "libnvinfer-headers-dev=$ver" "libnvinfer-headers-plugin-dev=$ver" "libnvonnxparsers-dev=$ver"
+          for d in *.deb; do dpkg -x "$d" .; done
+          find . -name 'Nv*.h' | sort
+      - name: Compile GPU sources (no link)
+        run: |
+          cmake -S gpu -B build-gpu -DNUROSIM_COMPILE_ONLY=ON -DTENSORRT_ROOT="$PWD/trt/usr" \
+                -DCMAKE_CUDA_ARCHITECTURES="75;87;89" -DCMAKE_CUDA_COMPILER=/usr/local/cuda-12.8/bin/nvcc
+          cmake --build build-gpu -j4 -- -k
